@@ -2,9 +2,8 @@
 
 ## Run locally
 
-**RECOMMENDED:**
-
-## Install Docker Desktop to make running the backend easier
+RECOMMENDED:
+Install Docker Desktop to make running the backend easier.
 
 
 **Frontend** (`client-react-vite`, port 5173):
