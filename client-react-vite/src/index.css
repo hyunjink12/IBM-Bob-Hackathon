@@ -7,9 +7,9 @@
 body {
   margin: 0;
   min-height: 100svh;
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
-  background: #fff;
-  color: #111;
+  font-family: 'Segoe UI', system-ui, Roboto, sans-serif;
+  background: #0f1115;
+  color: #e6edf3;
 }
 
 #root {

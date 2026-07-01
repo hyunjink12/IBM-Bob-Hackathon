@@ -11,10 +11,14 @@ services:
       - "8000:8000"
     environment:
       APP_ENV: development
+      APP_DUCKDB_PATH: /app/data/ethanol_dashboard.duckdb
+      APP_CRUSH_MODEL_PATH: /app/config/crush_model.json
       PYTHONUNBUFFERED: "1"
     volumes:
       # Bind-mount app code so uvicorn --reload picks up edits on both OSes.
       - ./backend-python/app:/app/app
+      - ./config:/app/config:ro
+      - ./backend-python/data:/app/data
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     healthcheck:
       test:

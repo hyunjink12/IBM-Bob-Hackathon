@@ -1,7 +1,8 @@
-import { HelloWorldView } from './views/HelloWorldView.jsx'
+import { DashboardView } from './views/DashboardView.jsx'
+import './styles/dashboard-dark.css'
 
 function App() {
-  return <HelloWorldView />
+  return <DashboardView />
 }
 
 export default App

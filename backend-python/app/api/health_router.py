@@ -20,7 +20,7 @@ def create_health_router(health_manager: HealthCheckManager) -> APIRouter:
     """
 
     @router.get("/health")
-    def read_health() -> dict[str, str]:
+    def read_health() -> dict:
         """Liveness probe used by Docker Compose and uptime monitors."""
         return asdict(health_manager.get_status())
 

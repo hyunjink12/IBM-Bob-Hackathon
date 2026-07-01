@@ -35,6 +35,11 @@ lerna-debug.log*
 .env.*
 !.env.example
 
+# --- Local DuckDB data ---
+backend-python/data/
+*.duckdb
+*.duckdb.wal
+
 # --- Logs ---
 logs/
 *.log

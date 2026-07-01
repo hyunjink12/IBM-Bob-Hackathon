@@ -24,3 +24,7 @@ class AppSettings(BaseSettings):
     env: str = "development"
     api_title: str = "Corn Ethanol Arb Monitor API"
     api_version: str = "0.1.0"
+    eia_api_key: str = ""
+    admin_token: str = ""
+    duckdb_path: str = "data/ethanol_dashboard.duckdb"
+    crush_model_path: str = "../config/crush_model.json"
