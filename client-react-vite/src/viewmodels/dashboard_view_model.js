@@ -4,8 +4,19 @@ import { DashboardApiClient } from '../managers/dashboard_api_client.js'
 
 /**
  * View-model hook for the ethanol crush dashboard.
+ *
+ * Casual: loads all dashboard panels once (or when range changes).
+ *
+ * Keeps fetch orchestration out of the view. The API client must be stable
+ * across renders — a fresh default instance every render would recreate
+ * `refresh` and retrigger the effect in a tight request loop.
  */
-export function useDashboardViewModel(apiClient = new DashboardApiClient()) {
+export function useDashboardViewModel(apiClient) {
+  const client = useMemo(
+    () => apiClient ?? new DashboardApiClient(),
+    [apiClient],
+  )
+
   const [chartRange, setChartRange] = useState(dashboardConfig.defaultChartRange)
   const [overview, setOverview] = useState(null)
   const [margins, setMargins] = useState(null)
@@ -30,11 +41,11 @@ export function useDashboardViewModel(apiClient = new DashboardApiClient()) {
     try {
       const [overviewData, marginsData, spreadData, warningsData, panel5Data] =
         await Promise.all([
-          apiClient.fetchOverview(),
-          apiClient.fetchMargins(queryParams),
-          apiClient.fetchSpread({ range: chartRange }),
-          apiClient.fetchWarnings(),
-          apiClient.fetchPanel5(),
+          client.fetchOverview(),
+          client.fetchMargins(queryParams),
+          client.fetchSpread({ range: chartRange }),
+          client.fetchWarnings(),
+          client.fetchPanel5(),
         ])
       setOverview(overviewData)
       setMargins(marginsData)
@@ -46,7 +57,7 @@ export function useDashboardViewModel(apiClient = new DashboardApiClient()) {
     } finally {
       setLoading(false)
     }
-  }, [apiClient, chartRange, queryParams])
+  }, [client, chartRange, queryParams])
 
   useEffect(() => {
     refresh()

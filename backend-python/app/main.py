@@ -1,5 +1,7 @@
 """FastAPI application entrypoint."""
 
+import logging
+import threading
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -19,12 +21,42 @@ from app.core.dependencies import (
 from app.managers.health_check_manager import HealthCheckManager
 from app.managers.hello_manager import HelloManager
 
+_logger = logging.getLogger(__name__)
 
-@asynccontextmanager
-async def _lifespan(_: FastAPI):
-    """Bootstrap dashboard data on startup."""
-    ensure_data_bootstrapped()
-    yield
+
+def _run_startup_data_refresh() -> None:
+    """
+    Kick off bootstrap/refresh without blocking the ASGI event loop.
+
+    Casual: load prices in the background so page refresh still works.
+    """
+    try:
+        ensure_data_bootstrapped()
+    except Exception:
+        _logger.exception("Startup data refresh failed")
+
+
+def _build_lifespan(settings: AppSettings):
+    """
+    Build a lifespan handler that bootstraps data on startup.
+
+    Casual: tests wait for seed data; dev runs refresh in a background thread.
+    """
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        if settings.env == "test":
+            _run_startup_data_refresh()
+        else:
+            refresh_thread = threading.Thread(
+                target=_run_startup_data_refresh,
+                name="startup-data-refresh",
+                daemon=True,
+            )
+            refresh_thread.start()
+        yield
+
+    return lifespan
 
 
 def create_app(settings: AppSettings | None = None) -> FastAPI:
@@ -62,7 +94,7 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
     app = FastAPI(
         title=resolved_settings.api_title,
         version=resolved_settings.api_version,
-        lifespan=_lifespan,
+        lifespan=_build_lifespan(resolved_settings),
     )
 
     app.add_middleware(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -119,6 +120,9 @@ class DuckDbRepository:
     def __init__(self, database_path: Path) -> None:
         self._database_path = database_path
         self._database_path.parent.mkdir(parents=True, exist_ok=True)
+        # DuckDB connections are not thread-safe; FastAPI serves sync routes
+        # from a thread pool, and the React client fires parallel /api calls.
+        self._io_lock = threading.RLock()
         self._connection = duckdb.connect(str(self._database_path))
         self._initialize_schema()
 
@@ -126,9 +130,37 @@ class DuckDbRepository:
         for statement in self.SCHEMA_STATEMENTS:
             self._connection.execute(statement)
 
+    def _fetchone(self, query: str, params: list[Any] | None = None):
+        """Run SQL and return one row while holding the repository lock."""
+        with self._io_lock:
+            if params is None:
+                return self._connection.execute(query).fetchone()
+            return self._connection.execute(query, params).fetchone()
+
+    def _fetchall(self, query: str, params: list[Any] | None = None) -> list[tuple[Any, ...]]:
+        """Run SQL and return all rows while holding the repository lock."""
+        with self._io_lock:
+            if params is None:
+                return self._connection.execute(query).fetchall()
+            return self._connection.execute(query, params).fetchall()
+
+    def _run(self, query: str, params: list[Any] | None = None) -> None:
+        """Run a write statement under the repository lock."""
+        with self._io_lock:
+            if params is None:
+                self._connection.execute(query)
+            else:
+                self._connection.execute(query, params)
+
+    def _executemany(self, query: str, params_list: list[tuple[Any, ...]]) -> None:
+        """Run a parameterized batch under the repository lock."""
+        with self._io_lock:
+            self._connection.executemany(query, params_list)
+
     def close(self) -> None:
         """Close the underlying DuckDB connection."""
-        self._connection.close()
+        with self._io_lock:
+            self._connection.close()
 
     def upsert_raw_observations(self, observations: list[RawObservation]) -> int:
         """Insert or replace raw market observations."""
@@ -144,7 +176,7 @@ class DuckDbRepository:
             )
             for obs in observations
         ]
-        self._connection.executemany(
+        self._executemany(
             """
             INSERT INTO raw_observations (source, series_id, obs_date, value, fetched_at)
             VALUES (?, ?, ?, ?, ?)
@@ -158,12 +190,12 @@ class DuckDbRepository:
 
     def get_series_last_updated(self, series_id: str) -> datetime | None:
         """Return the latest fetch time for a logical series id."""
-        result = self._connection.execute(
+        result = self._fetchone(
             """
             SELECT MAX(fetched_at) FROM raw_observations WHERE series_id = ?
             """,
             [series_id],
-        ).fetchone()
+        )
         if result is None or result[0] is None:
             return None
         return result[0]
@@ -173,7 +205,7 @@ class DuckDbRepository:
         if not rows:
             return 0
         for row in rows:
-            self._connection.execute(
+            self._run(
                 """
                 INSERT INTO merged_daily (
                     obs_date, corn_usd_per_bushel, ethanol_usd_per_gallon,
@@ -212,7 +244,7 @@ class DuckDbRepository:
         if not rows:
             return 0
         for row in rows:
-            self._connection.execute(
+            self._run(
                 """
                 INSERT INTO computed_margins (
                     obs_date, margin_per_bushel, margin_per_gallon,
@@ -242,12 +274,12 @@ class DuckDbRepository:
         signals: list[dict[str, Any]],
     ) -> int:
         """Replace warning signals for a single observation date."""
-        self._connection.execute(
+        self._run(
             "DELETE FROM warning_signals WHERE obs_date = ?",
             [obs_date],
         )
         for signal in signals:
-            self._connection.execute(
+            self._run(
                 """
                 INSERT INTO warning_signals (
                     obs_date, signal_type, severity, message, metadata_json
@@ -272,7 +304,7 @@ class DuckDbRepository:
         errors: str | None = None,
     ) -> None:
         """Log an ingestion run for health checks and debugging."""
-        self._connection.execute(
+        self._run(
             """
             INSERT INTO ingestion_runs (run_id, started_at, finished_at, status, errors)
             VALUES (?, ?, ?, ?, ?)
@@ -286,14 +318,14 @@ class DuckDbRepository:
 
     def get_latest_ingestion_run(self) -> dict[str, Any] | None:
         """Return metadata for the most recent ingestion run."""
-        row = self._connection.execute(
+        row = self._fetchone(
             """
             SELECT run_id, started_at, finished_at, status, errors
             FROM ingestion_runs
             ORDER BY started_at DESC
             LIMIT 1
             """
-        ).fetchone()
+        )
         if row is None:
             return None
         return {
@@ -319,7 +351,7 @@ class DuckDbRepository:
             query += " AND obs_date <= ?"
             params.append(end_date)
         query += " ORDER BY obs_date"
-        rows = self._connection.execute(query, params).fetchall()
+        rows = self._fetchall(query, params)
         return [self._row_to_merged_daily(row) for row in rows]
 
     def fetch_computed_margins(
@@ -337,7 +369,7 @@ class DuckDbRepository:
             query += " AND obs_date <= ?"
             params.append(end_date)
         query += " ORDER BY obs_date"
-        rows = self._connection.execute(query, params).fetchall()
+        rows = self._fetchall(query, params)
         return [
             ComputedMarginRow(
                 obs_date=row[0],
@@ -352,18 +384,18 @@ class DuckDbRepository:
 
     def fetch_latest_merged_daily(self) -> MergedDailyRow | None:
         """Return the newest merged daily row."""
-        row = self._connection.execute(
+        row = self._fetchone(
             "SELECT * FROM merged_daily ORDER BY obs_date DESC LIMIT 1"
-        ).fetchone()
+        )
         if row is None:
             return None
         return self._row_to_merged_daily(row)
 
     def fetch_latest_computed_margin(self) -> ComputedMarginRow | None:
         """Return the newest computed margin row."""
-        row = self._connection.execute(
+        row = self._fetchone(
             "SELECT * FROM computed_margins ORDER BY obs_date DESC LIMIT 1"
-        ).fetchone()
+        )
         if row is None:
             return None
         return ComputedMarginRow(
@@ -377,7 +409,7 @@ class DuckDbRepository:
 
     def fetch_warning_signals_for_date(self, obs_date: date) -> list[dict[str, Any]]:
         """Load active warning cards for a date."""
-        rows = self._connection.execute(
+        rows = self._fetchall(
             """
             SELECT signal_type, severity, message, metadata_json
             FROM warning_signals
@@ -385,7 +417,7 @@ class DuckDbRepository:
             ORDER BY severity DESC, signal_type
             """,
             [obs_date],
-        ).fetchall()
+        )
         return [
             {
                 "signal_type": row[0],
@@ -398,13 +430,13 @@ class DuckDbRepository:
 
     def fetch_all_raw_observations(self) -> list[RawObservation]:
         """Load all raw observations ordered by series and date."""
-        rows = self._connection.execute(
+        rows = self._fetchall(
             """
             SELECT source, series_id, obs_date, value, fetched_at
             FROM raw_observations
             ORDER BY series_id, obs_date
             """
-        ).fetchall()
+        )
         return [
             RawObservation(
                 source=row[0],
@@ -418,7 +450,7 @@ class DuckDbRepository:
 
     def count_merged_daily_rows(self) -> int:
         """Return how many merged daily rows exist (used to detect empty DB)."""
-        result = self._connection.execute("SELECT COUNT(*) FROM merged_daily").fetchone()
+        result = self._fetchone("SELECT COUNT(*) FROM merged_daily")
         return int(result[0]) if result else 0
 
     @staticmethod

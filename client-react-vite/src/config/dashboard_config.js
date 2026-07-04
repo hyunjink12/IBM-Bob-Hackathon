@@ -26,6 +26,8 @@ export const dashboardConfig = {
   tooltips: {
     margin_per_bushel:
       'Estimated crush margin per bushel of corn after ethanol, DDGS, gas, and opex.',
+    margin_per_gallon:
+      'Same crush margin expressed per gallon of ethanol output.',
     z_score: 'How today’s margin compares to the selected historical window.',
     signal_label: 'Rich / weak labels come from the z-score bands in config.',
     spread:

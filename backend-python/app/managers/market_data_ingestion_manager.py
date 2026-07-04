@@ -45,6 +45,18 @@ class MarketDataIngestionManager:
         self._z_score_manager = ZScoreManager()
         self._warning_manager = WarningSignalManager(repository)
 
+    def should_refresh_live_data_on_startup(self) -> bool:
+        """
+        Decide whether to re-run ingestion when the database already has rows.
+
+        Casual: refresh Yahoo + EIA on every boot; tests stick to seed only.
+
+        Without this, a first-run seed sticks around forever even after live
+        clients are wired up. Yahoo futures and EIA both upsert on each pipeline
+        run, so we refresh whenever we are not in the test environment.
+        """
+        return self._should_fetch_live_futures()
+
     def run_full_pipeline(
         self,
         *,

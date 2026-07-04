@@ -160,8 +160,16 @@
 
 .metric-tooltip {
   position: relative;
-  display: inline-flex;
+  display: flex;
   flex-direction: column;
+  min-width: 0;
+}
+
+.metric-tooltip__label {
+  display: block;
+  color: #7d8da6;
+  font-size: 0.8rem;
+  margin-bottom: 0.35rem;
 }
 
 .metric-tooltip__popup {

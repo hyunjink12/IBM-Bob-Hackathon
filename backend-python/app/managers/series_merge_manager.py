@@ -106,10 +106,35 @@ class SeriesMergeManager:
         return merged_rows
 
     def _load_raw_series_map(self) -> dict[str, list[RawObservation]]:
+        """
+        Group raw rows by series, preferring live feeds over synthetic seed rows.
+
+        Casual: if EIA and seed both have a Wednesday, trust EIA.
+
+        ``raw_observations`` stores one row per (source, series_id, date). After
+        the first bootstrap, seed and EIA can overlap on the same calendar day;
+        the merge should keep the higher-trust source so the UI reflects live
+        weekly stocks/production instead of stale demo numbers.
+        """
         observations = self._repository.fetch_all_raw_observations()
-        series_map: dict[str, list[RawObservation]] = {}
+        # yahoo_futures is the live Yahoo client source tag (not "yahoo").
+        source_priority = {"eia": 3, "yahoo_futures": 2, "seed": 1}
+        best_by_series_date: dict[tuple[str, date], RawObservation] = {}
+
         for observation in observations:
+            key = (observation.series_id, observation.obs_date)
+            existing = best_by_series_date.get(key)
+            if existing is None or source_priority.get(
+                observation.source, 0
+            ) > source_priority.get(existing.source, 0):
+                best_by_series_date[key] = observation
+
+        series_map: dict[str, list[RawObservation]] = {}
+        for observation in best_by_series_date.values():
             series_map.setdefault(observation.series_id, []).append(observation)
+
+        for series_id in series_map:
+            series_map[series_id].sort(key=lambda item: item.obs_date)
         return series_map
 
     @staticmethod

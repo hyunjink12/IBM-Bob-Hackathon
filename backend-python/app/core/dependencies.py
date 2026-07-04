@@ -73,10 +73,17 @@ def build_dashboard_manager() -> DashboardManager:
 
 def ensure_data_bootstrapped() -> None:
     """
-    Run ingestion once when the database has no merged rows.
+    Seed an empty database or refresh live Yahoo/EIA feeds on startup.
 
-    Casual: first launch seeds data so the UI isn't empty.
+    Casual: first launch seeds data; later launches pull fresh futures (and EIA
+    when a key is set) so the dashboard is not stuck on synthetic numbers.
+
+    Runs synchronously — call from a background thread during API startup so
+    uvicorn can accept dashboard requests while Yahoo/EIA pulls finish.
     """
     repository = get_repository()
-    if repository.count_merged_daily_rows() == 0:
-        build_ingestion_manager().run_full_pipeline()
+    ingestion_manager = build_ingestion_manager()
+    is_empty = repository.count_merged_daily_rows() == 0
+    should_refresh_eia = ingestion_manager.should_refresh_live_data_on_startup()
+    if is_empty or should_refresh_eia:
+        ingestion_manager.run_full_pipeline()

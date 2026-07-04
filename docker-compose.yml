@@ -9,6 +9,8 @@ services:
     container_name: corn-ethanol-backend
     ports:
       - "8000:8000"
+    env_file:
+      - ./backend-python/.env
     environment:
       APP_ENV: development
       APP_DUCKDB_PATH: /app/data/ethanol_dashboard.duckdb

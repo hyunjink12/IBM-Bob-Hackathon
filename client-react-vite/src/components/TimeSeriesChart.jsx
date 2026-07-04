@@ -2,6 +2,13 @@ import { useEffect, useRef } from 'react'
 import uPlot from 'uplot'
 import 'uplot/dist/uPlot.min.css'
 
+/** Compact M/D/YY label for chart x-axis ticks. */
+function formatChartAxisDate(unixSeconds) {
+  const date = new Date(unixSeconds * 1000)
+  const year = String(date.getFullYear()).slice(-2)
+  return `${date.getMonth() + 1}/${date.getDate()}/${year}`
+}
+
 /**
  * Lightweight time-series chart wrapper around uPlot.
  */
@@ -46,11 +53,7 @@ export function TimeSeriesChart({
           {
             stroke: '#9aa5b1',
             grid: { stroke: '#2a3140' },
-            values: (_, ticks) =>
-              ticks.map((value) => {
-                const date = new Date(value * 1000)
-                return `${date.getMonth() + 1}/${date.getDate()}`
-              }),
+            values: (_, ticks) => ticks.map(formatChartAxisDate),
           },
           {
             stroke: '#9aa5b1',

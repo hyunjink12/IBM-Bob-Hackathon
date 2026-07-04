@@ -23,17 +23,16 @@ export function CrushMarginPanel({ margins, config }) {
         <div className="hero-metrics">
           <MetricTooltip label="Margin / bu" tooltip={config.tooltips.margin_per_bushel}>
             <div className="hero-metric">
-              <span className="hero-metric__label">Margin / bu</span>
               <span className="hero-metric__value">${current.margin_per_bushel.toFixed(3)}</span>
             </div>
           </MetricTooltip>
-          <div className="hero-metric">
-            <span className="hero-metric__label">Margin / gal</span>
-            <span className="hero-metric__value">${current.margin_per_gallon.toFixed(3)}</span>
-          </div>
+          <MetricTooltip label="Margin / gal" tooltip={config.tooltips.margin_per_gallon}>
+            <div className="hero-metric">
+              <span className="hero-metric__value">${current.margin_per_gallon.toFixed(3)}</span>
+            </div>
+          </MetricTooltip>
           <MetricTooltip label="Z-score" tooltip={config.tooltips.z_score}>
             <div className="hero-metric">
-              <span className="hero-metric__label">Z-score</span>
               <span className="hero-metric__value">
                 {current.z_score == null ? '—' : current.z_score.toFixed(2)}
               </span>
@@ -41,7 +40,6 @@ export function CrushMarginPanel({ margins, config }) {
           </MetricTooltip>
           <MetricTooltip label="Signal" tooltip={config.tooltips.signal_label}>
             <div className="hero-metric">
-              <span className="hero-metric__label">Signal</span>
               <span className={signalClass}>{current.signal_label}</span>
             </div>
           </MetricTooltip>
