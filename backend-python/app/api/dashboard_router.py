@@ -36,9 +36,9 @@ def create_dashboard_router(dashboard_manager: DashboardManager) -> APIRouter:
     def read_warnings() -> dict:
         return dashboard_manager.get_warnings()
 
-    @router.get("/panel5")
-    def read_panel5() -> dict:
-        return dashboard_manager.get_panel5_placeholder()
+    @router.get("/backtest")
+    def read_backtest() -> dict:
+        return dashboard_manager.get_backtest()
 
     return router
 
