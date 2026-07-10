@@ -228,6 +228,26 @@
 .warning-card--high { border-left-color: #f07178; }
 .warning-card--medium { border-left-color: #f0a878; }
 
+.warning-card__trade {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  color: #d1d7e0;
+}
+
+.warning-card__trade strong {
+  color: #f0a878;
+  margin-right: 0.25rem;
+}
+
+.warning-card__backtest {
+  margin: 0.5rem 0 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid #242b38;
+  font-size: 0.8rem;
+  color: #9aa5b1;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Always-on inventory/production strip so Panel 4 never looks empty. */
 .stress-snapshot {
   margin-bottom: 0.9rem;
