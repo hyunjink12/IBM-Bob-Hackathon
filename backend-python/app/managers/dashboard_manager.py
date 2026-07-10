@@ -7,6 +7,11 @@ from datetime import date, timedelta
 from app.managers.crush_margin_calculator import CrushMarginCalculator
 from app.managers.inventory_stress_manager import InventoryStressManager
 from app.managers.seed_data_status_manager import SeedDataStatusManager
+from app.managers.warning_backtester import (
+    RuleBacktestReport,
+    WarningRuleBacktester,
+    report_to_dict,
+)
 from app.managers.series_merge_manager import (
     SERIES_CORN,
     SERIES_DDGS,
@@ -60,6 +65,7 @@ class DashboardManager:
         crush_config: CrushModelConfig,
         seed_status_manager: SeedDataStatusManager | None = None,
         inventory_stress_manager: InventoryStressManager | None = None,
+        backtester: WarningRuleBacktester | None = None,
     ) -> None:
         self._repository = repository
         self._margin_calculator = CrushMarginCalculator(crush_config)
@@ -70,6 +76,8 @@ class DashboardManager:
         self._inventory_stress_manager = (
             inventory_stress_manager or InventoryStressManager()
         )
+        self._backtester = backtester or WarningRuleBacktester(repository)
+        self._backtest_cache: tuple[str | None, list[RuleBacktestReport]] | None = None
 
     def get_overview(self) -> dict:
         """Panel 1 payload with latest values, timestamps, and seed provenance."""
@@ -132,24 +140,47 @@ class DashboardManager:
         Casual: 2.8 gallons of ethanol out for every bushel of corn in.
 
         `crush_spread_usd_per_bushel` = 2.8 × ethanol_$/gal − corn_$/bu, both
-        legs surfaced so the UI can show which side is driving the move.
+        legs surfaced so the UI can show which side is driving the move. Series
+        rows carry the same rolling-z-score / rich-normal-weak label the crush
+        margin panel uses so the abstract's "rich or cheap" reading is explicit.
         """
         start_date, end_date = self._resolve_date_range(range_token)
         merged_rows = self._repository.fetch_merged_daily(start_date, end_date)
-        series = []
+
+        spread_points: list[tuple] = []  # (obs_date, spread_val, eth_leg, corn_leg)
         for row in merged_rows:
             spread = self._margin_calculator.calculate_spread(row)
             if spread is None:
                 continue
+            spread_points.append(
+                (
+                    row.obs_date,
+                    spread.spread_usd_per_bushel,
+                    spread.ethanol_leg_usd_per_bushel,
+                    spread.corn_leg_usd_per_bushel,
+                )
+            )
+
+        annotated = self._z_score_manager.annotate_series(
+            [(obs_date, spread_val) for obs_date, spread_val, _, _ in spread_points]
+        )
+
+        series = []
+        for (obs_date, spread_val, eth_leg, corn_leg), (_, _, z_score, signal_label) in zip(
+            spread_points, annotated
+        ):
             series.append(
                 {
-                    "date": row.obs_date.isoformat(),
-                    "crush_spread_usd_per_bushel": spread.spread_usd_per_bushel,
-                    "ethanol_leg_usd_per_bushel": spread.ethanol_leg_usd_per_bushel,
-                    "corn_leg_usd_per_bushel": spread.corn_leg_usd_per_bushel,
+                    "date": obs_date.isoformat(),
+                    "crush_spread_usd_per_bushel": spread_val,
+                    "ethanol_leg_usd_per_bushel": eth_leg,
+                    "corn_leg_usd_per_bushel": corn_leg,
+                    "z_score": z_score,
+                    "signal_label": signal_label,
                 }
             )
-        return {"range": range_token, "series": series}
+        current = series[-1] if series else None
+        return {"range": range_token, "series": series, "current": current}
 
     def get_warnings(self) -> dict:
         """
@@ -192,11 +223,28 @@ class DashboardManager:
             "stress": stress,
         }
 
-    def get_panel5_placeholder(self) -> dict:
-        """Panel 5 placeholder until content is defined."""
+    def get_backtest(self) -> dict:
+        """
+        Backtest reports for each warning rule, cached per ingestion run.
+
+        Casual: 'if this rule had fired historically, what happened next?'
+
+        Cached in-memory keyed on the latest ingestion timestamp, so we don't
+        replay 5Y of history on every dashboard page load. Invalidates
+        automatically after a new ingest.
+        """
+        latest_ingest = self._repository.get_latest_ingestion_run()
+        cache_key = (
+            latest_ingest.get("finished_at").isoformat()
+            if latest_ingest and latest_ingest.get("finished_at")
+            else None
+        )
+        if self._backtest_cache is None or self._backtest_cache[0] != cache_key:
+            reports = self._backtester.run()
+            self._backtest_cache = (cache_key, reports)
+        _, reports = self._backtest_cache
         return {
-            "status": "placeholder",
-            "message": "Panel 5 content TBD — slot reserved for RBOB blending or WASDE deep-dive.",
+            "reports": [report_to_dict(report) for report in reports],
         }
 
     def _build_wasde_summary(self, latest) -> dict:
