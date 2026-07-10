@@ -52,6 +52,7 @@ class WarningSignalManager:
                 "signal_type": signal.signal_type,
                 "severity": signal.severity,
                 "message": signal.message,
+                "suggested_trade": signal.suggested_trade,
                 "metadata_json": json.dumps(signal.metadata),
             }
             for signal in active_signals
