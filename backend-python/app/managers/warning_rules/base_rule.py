@@ -16,6 +16,7 @@ class WarningSignal:
     signal_type: str
     severity: str
     message: str
+    suggested_trade: str
     metadata: dict[str, Any]
 
 
