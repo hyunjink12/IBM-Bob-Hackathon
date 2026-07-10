@@ -22,7 +22,7 @@ export function useDashboardViewModel(apiClient) {
   const [margins, setMargins] = useState(null)
   const [spread, setSpread] = useState(null)
   const [warnings, setWarnings] = useState(null)
-  const [panel5, setPanel5] = useState(null)
+  const [backtest, setBacktest] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -39,19 +39,19 @@ export function useDashboardViewModel(apiClient) {
     setLoading(true)
     setError(null)
     try {
-      const [overviewData, marginsData, spreadData, warningsData, panel5Data] =
+      const [overviewData, marginsData, spreadData, warningsData, backtestData] =
         await Promise.all([
           client.fetchOverview(),
           client.fetchMargins(queryParams),
           client.fetchSpread({ range: chartRange }),
           client.fetchWarnings(),
-          client.fetchPanel5(),
+          client.fetchBacktest(),
         ])
       setOverview(overviewData)
       setMargins(marginsData)
       setSpread(spreadData)
       setWarnings(warningsData)
-      setPanel5(panel5Data)
+      setBacktest(backtestData)
     } catch (fetchError) {
       setError(fetchError instanceof Error ? fetchError.message : 'Unknown error')
     } finally {
@@ -70,7 +70,7 @@ export function useDashboardViewModel(apiClient) {
     margins,
     spread,
     warnings,
-    panel5,
+    backtest,
     loading,
     error,
     refresh,
