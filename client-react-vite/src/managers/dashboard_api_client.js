@@ -29,8 +29,8 @@ export class DashboardApiClient {
     return this._get('/api/dashboard/warnings')
   }
 
-  async fetchPanel5() {
-    return this._get('/api/dashboard/panel5')
+  async fetchBacktest() {
+    return this._get('/api/dashboard/backtest')
   }
 
   async _get(path) {
