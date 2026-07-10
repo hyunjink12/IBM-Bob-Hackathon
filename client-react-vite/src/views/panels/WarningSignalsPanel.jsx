@@ -7,13 +7,16 @@
  * missing data. The stress block keeps levels and deltas visible even when no
  * warning rules fire.
  */
-export function WarningSignalsPanel({ warnings }) {
+export function WarningSignalsPanel({ warnings, backtest }) {
   if (!warnings) {
     return <section className="panel">Loading warning signals…</section>
   }
 
   const stress = warnings.stress ?? null
   const activeWarnings = warnings.warnings ?? []
+  const reportsBySignalType = new Map(
+    (backtest?.reports ?? []).map((r) => [r.signal_type, r]),
+  )
 
   return (
     <section className="panel">
@@ -32,17 +35,58 @@ export function WarningSignalsPanel({ warnings }) {
       ) : (
         <div className="warning-grid">
           {activeWarnings.map((warning) => (
-            <article
+            <WarningCard
               key={warning.signal_type}
-              className={`warning-card warning-card--${warning.severity}`}
-            >
-              <h3>{warning.signal_type.replaceAll('_', ' ')}</h3>
-              <p>{warning.message}</p>
-            </article>
+              warning={warning}
+              report={reportsBySignalType.get(warning.signal_type)}
+            />
           ))}
         </div>
       )}
     </section>
+  )
+}
+
+/**
+ * Single warning card with rule message, suggested trade, and backtest track record.
+ *
+ * Casual: what fired, what to consider trading, and how the rule has done historically.
+ */
+function WarningCard({ warning, report }) {
+  return (
+    <article className={`warning-card warning-card--${warning.severity}`}>
+      <h3>{warning.signal_type.replaceAll('_', ' ')}</h3>
+      <p>{warning.message}</p>
+      {warning.suggested_trade ? (
+        <p className="warning-card__trade">
+          <strong>Possible trade:</strong> {warning.suggested_trade}
+        </p>
+      ) : null}
+      {report ? <BacktestStrip report={report} /> : null}
+    </article>
+  )
+}
+
+/**
+ * One-line track record for the underlying rule.
+ *
+ * Casual: fired N× • 30d median $X • hit rate Y%.
+ */
+function BacktestStrip({ report }) {
+  const median30 = report.median_move_by_horizon?.['30']
+  const hitRate30 = report.hit_rate_by_horizon?.['30']
+  const parts = [`fired ${report.fire_count}×`]
+  if (median30 != null) {
+    const sign = median30 >= 0 ? '+' : ''
+    parts.push(`30d median ${sign}$${median30.toFixed(2)}`)
+  }
+  if (hitRate30 != null) {
+    parts.push(`hit rate ${(hitRate30 * 100).toFixed(0)}%`)
+  }
+  return (
+    <p className="warning-card__backtest">
+      Track record: {parts.join(' • ')}
+    </p>
   )
 }
 
