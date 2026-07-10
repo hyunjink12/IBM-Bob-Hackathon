@@ -102,9 +102,14 @@ class DuckDbRepository:
             signal_type VARCHAR NOT NULL,
             severity VARCHAR NOT NULL,
             message VARCHAR NOT NULL,
+            suggested_trade VARCHAR,
             metadata_json VARCHAR,
             PRIMARY KEY (obs_date, signal_type)
         )
+        """,
+        # Idempotent migration for databases seeded before suggested_trade existed.
+        """
+        ALTER TABLE warning_signals ADD COLUMN IF NOT EXISTS suggested_trade VARCHAR
         """,
         """
         CREATE TABLE IF NOT EXISTS ingestion_runs (
@@ -282,14 +287,15 @@ class DuckDbRepository:
             self._run(
                 """
                 INSERT INTO warning_signals (
-                    obs_date, signal_type, severity, message, metadata_json
-                ) VALUES (?, ?, ?, ?, ?)
+                    obs_date, signal_type, severity, message, suggested_trade, metadata_json
+                ) VALUES (?, ?, ?, ?, ?, ?)
                 """,
                 [
                     obs_date,
                     signal["signal_type"],
                     signal["severity"],
                     signal["message"],
+                    signal.get("suggested_trade"),
                     signal.get("metadata_json"),
                 ],
             )
@@ -411,7 +417,7 @@ class DuckDbRepository:
         """Load active warning cards for a date."""
         rows = self._fetchall(
             """
-            SELECT signal_type, severity, message, metadata_json
+            SELECT signal_type, severity, message, suggested_trade, metadata_json
             FROM warning_signals
             WHERE obs_date = ?
             ORDER BY severity DESC, signal_type
@@ -423,7 +429,8 @@ class DuckDbRepository:
                 "signal_type": row[0],
                 "severity": row[1],
                 "message": row[2],
-                "metadata_json": row[3],
+                "suggested_trade": row[3],
+                "metadata_json": row[4],
             }
             for row in rows
         ]
