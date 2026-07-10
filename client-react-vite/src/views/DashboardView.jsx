@@ -4,7 +4,6 @@ import { MethodologyFooter } from './MethodologyFooter.jsx'
 import { CornEthanolSpreadPanel } from './panels/CornEthanolSpreadPanel.jsx'
 import { CrushMarginPanel } from './panels/CrushMarginPanel.jsx'
 import { MarketOverviewPanel } from './panels/MarketOverviewPanel.jsx'
-import { Panel5Placeholder } from './panels/Panel5Placeholder.jsx'
 import { WarningSignalsPanel } from './panels/WarningSignalsPanel.jsx'
 
 /**
@@ -20,7 +19,7 @@ export function DashboardView() {
     margins,
     spread,
     warnings,
-    panel5,
+    backtest,
     loading,
     error,
     refresh,
@@ -62,8 +61,7 @@ export function DashboardView() {
         <MarketOverviewPanel overview={overview} />
         <CrushMarginPanel margins={margins} config={config} />
         <CornEthanolSpreadPanel spread={spread} config={config} />
-        <WarningSignalsPanel warnings={warnings} />
-        <Panel5Placeholder panel5={panel5} />
+        <WarningSignalsPanel warnings={warnings} backtest={backtest} />
       </main>
 
       <MethodologyFooter />
