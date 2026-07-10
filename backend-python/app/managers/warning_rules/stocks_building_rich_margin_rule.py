@@ -33,7 +33,11 @@ class StocksBuildingRichMarginRule(WarningRule):
             severity="high",
             message=(
                 "Ethanol inventories are building while crush margins remain strong. "
-                "Production may be outpacing blending demand."
+                "Production may be outpacing blending demand — early divergence signal."
+            ),
+            suggested_trade=(
+                "Short ethanol. Forecasted blending demand may be overstated relative "
+                "to the pace of inventory build."
             ),
             metadata={"signal_label": margin_row.signal_label},
         )
