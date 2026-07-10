@@ -40,6 +40,8 @@ def test_dashboard_overview_after_bootstrap(client: TestClient) -> None:
     payload = response.json()
     assert payload["as_of"] is not None
     assert len(payload["metrics"]) >= 7
+    assert payload["data_provenance"]["using_seed_data"] is True
+    assert payload["data_provenance"]["message"]
 
 
 @pytest.mark.integration

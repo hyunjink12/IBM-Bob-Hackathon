@@ -5,6 +5,76 @@
   padding: 1.5rem 2rem 3rem;
 }
 
+/* Hard-to-miss strip when synthetic seed rows are still driving the UI. */
+.seed-data-warning {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: 12px 1fr;
+  margin: -1.5rem -2rem 1.5rem;
+  background: linear-gradient(90deg, #5c1a12 0%, #7a2a12 45%, #5c1a12 100%);
+  border-bottom: 3px solid #ffb020;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  animation: seed-data-warning-pulse 2.4s ease-in-out infinite;
+}
+
+.seed-data-warning__stripe {
+  background: repeating-linear-gradient(
+    -45deg,
+    #ffb020,
+    #ffb020 10px,
+    #1a1208 10px,
+    #1a1208 20px
+  );
+}
+
+.seed-data-warning__body {
+  padding: 0.9rem 1.25rem 1rem;
+}
+
+.seed-data-warning__eyebrow {
+  margin: 0;
+  color: #ffd27a;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.seed-data-warning__title {
+  margin: 0.2rem 0 0.35rem;
+  color: #fff4d6;
+  font-size: clamp(1.05rem, 2.2vw, 1.45rem);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.seed-data-warning__message,
+.seed-data-warning__series {
+  margin: 0.2rem 0 0;
+  color: #ffe8b8;
+  font-size: 0.9rem;
+  max-width: 70rem;
+}
+
+.seed-data-warning__series {
+  color: #ffc766;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+}
+
+@keyframes seed-data-warning-pulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.12);
+  }
+}
+
 .dashboard__header {
   display: flex;
   justify-content: space-between;

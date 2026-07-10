@@ -32,8 +32,20 @@ class SeriesMergeManager:
     so charts stay continuous. Flags release days via metadata on the API layer.
     """
 
+    # yahoo_futures is the live Yahoo client source tag (not "yahoo").
+    SOURCE_PRIORITY = {"eia": 3, "yahoo_futures": 2, "seed": 1}
+
     def __init__(self, repository: DuckDbRepository) -> None:
         self._repository = repository
+
+    @classmethod
+    def source_priority(cls, source: str) -> int:
+        """
+        Rank a raw feed so live beats synthetic seed.
+
+        Casual: higher number wins when two sources share a date.
+        """
+        return cls.SOURCE_PRIORITY.get(source, 0)
 
     def rebuild_merged_daily(
         self,
@@ -117,16 +129,14 @@ class SeriesMergeManager:
         weekly stocks/production instead of stale demo numbers.
         """
         observations = self._repository.fetch_all_raw_observations()
-        # yahoo_futures is the live Yahoo client source tag (not "yahoo").
-        source_priority = {"eia": 3, "yahoo_futures": 2, "seed": 1}
         best_by_series_date: dict[tuple[str, date], RawObservation] = {}
 
         for observation in observations:
             key = (observation.series_id, observation.obs_date)
             existing = best_by_series_date.get(key)
-            if existing is None or source_priority.get(
-                observation.source, 0
-            ) > source_priority.get(existing.source, 0):
+            if existing is None or self.source_priority(
+                observation.source
+            ) > self.source_priority(existing.source):
                 best_by_series_date[key] = observation
 
         series_map: dict[str, list[RawObservation]] = {}

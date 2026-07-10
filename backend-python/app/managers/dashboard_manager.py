@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 from app.managers.crush_margin_calculator import CrushMarginCalculator
+from app.managers.seed_data_status_manager import SeedDataStatusManager
 from app.managers.series_merge_manager import (
     SERIES_CORN,
     SERIES_DDGS,
@@ -56,13 +57,17 @@ class DashboardManager:
         self,
         repository: DuckDbRepository,
         crush_config: CrushModelConfig,
+        seed_status_manager: SeedDataStatusManager | None = None,
     ) -> None:
         self._repository = repository
         self._margin_calculator = CrushMarginCalculator(crush_config)
         self._z_score_manager = ZScoreManager()
+        self._seed_status_manager = seed_status_manager or SeedDataStatusManager(
+            repository
+        )
 
     def get_overview(self) -> dict:
-        """Panel 1 payload with latest values and per-series timestamps."""
+        """Panel 1 payload with latest values, timestamps, and seed provenance."""
         latest = self._repository.fetch_latest_merged_daily()
         metrics = []
         for key, series_id, field_name, unit, description in self.OVERVIEW_SERIES:
@@ -84,6 +89,7 @@ class DashboardManager:
             "as_of": latest.obs_date.isoformat() if latest else None,
             "metrics": metrics,
             "wasde": wasde,
+            "data_provenance": self._seed_status_manager.get_status(),
         }
 
     def get_margins(

@@ -1,4 +1,5 @@
 import { useDashboardViewModel } from '../viewmodels/dashboard_view_model.js'
+import { SeedDataWarningBanner } from '../components/SeedDataWarningBanner.jsx'
 import { MethodologyFooter } from './MethodologyFooter.jsx'
 import { CornEthanolSpreadPanel } from './panels/CornEthanolSpreadPanel.jsx'
 import { CrushMarginPanel } from './panels/CrushMarginPanel.jsx'
@@ -8,6 +9,8 @@ import { WarningSignalsPanel } from './panels/WarningSignalsPanel.jsx'
 
 /**
  * Main single-page ethanol crush dashboard.
+ *
+ * Casual: wires panels + the seed-data warning when demo rows are in play.
  */
 export function DashboardView() {
   const {
@@ -26,6 +29,8 @@ export function DashboardView() {
 
   return (
     <div className="dashboard">
+      <SeedDataWarningBanner dataProvenance={overview?.data_provenance} />
+
       <header className="dashboard__header">
         <div>
           <p className="dashboard__eyebrow">Corn Ethanol Arb Monitor</p>
