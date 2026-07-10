@@ -34,7 +34,7 @@ class DashboardManager:
 
     OVERVIEW_SERIES = (
         ("corn", SERIES_CORN, "corn_usd_per_bushel", "$/bu", "CBOT corn futures"),
-        ("ethanol", SERIES_ETHANOL, "ethanol_usd_per_gallon", "$/gal", "CBOT EH futures"),
+        ("ethanol", SERIES_ETHANOL, "ethanol_usd_per_gallon", "$/gal", "CME EH futures (Chicago Ethanol Platts)"),
         ("ddgs", SERIES_DDGS, "ddgs_usd_per_short_ton", "$/short ton", "DDGS coproduct"),
         ("nat_gas", SERIES_NAT_GAS, "nat_gas_usd_per_mmbtu", "$/MMBtu", "Henry Hub proxy"),
         ("rbob", SERIES_RBOB, "rbob_usd_per_gallon", "$/gal", "RBOB gasoline futures"),
@@ -126,7 +126,14 @@ class DashboardManager:
         }
 
     def get_spread(self, *, range_token: str = "1Y") -> dict:
-        """Panel 3 payload with net ethanol vs corn spread."""
+        """
+        Panel 3 payload with the CME-standard ethanol crush spread.
+
+        Casual: 2.8 gallons of ethanol out for every bushel of corn in.
+
+        `crush_spread_usd_per_bushel` = 2.8 × ethanol_$/gal − corn_$/bu, both
+        legs surfaced so the UI can show which side is driving the move.
+        """
         start_date, end_date = self._resolve_date_range(range_token)
         merged_rows = self._repository.fetch_merged_daily(start_date, end_date)
         series = []
@@ -137,13 +144,9 @@ class DashboardManager:
             series.append(
                 {
                     "date": row.obs_date.isoformat(),
-                    "spread_usd_per_bushel": spread,
-                    "corn_usd_per_bushel": row.corn_usd_per_bushel,
-                    "ethanol_net_usd_per_bushel": (
-                        self._margin_calculator.calculate(row).ethanol_net_per_bushel
-                        if self._margin_calculator.calculate(row)
-                        else None
-                    ),
+                    "crush_spread_usd_per_bushel": spread.spread_usd_per_bushel,
+                    "ethanol_leg_usd_per_bushel": spread.ethanol_leg_usd_per_bushel,
+                    "corn_leg_usd_per_bushel": spread.corn_leg_usd_per_bushel,
                 }
             )
         return {"range": range_token, "series": series}

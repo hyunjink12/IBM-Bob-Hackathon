@@ -15,7 +15,15 @@ class CrushMarginResult:
     margin_per_bushel: float
     margin_per_gallon: float
     corn_oil_included: bool
-    ethanol_net_per_bushel: float
+
+
+@dataclass(frozen=True)
+class CrushSpreadResult:
+    """CME-standard ethanol crush spread components for one merged daily row."""
+
+    spread_usd_per_bushel: float
+    ethanol_leg_usd_per_bushel: float
+    corn_leg_usd_per_bushel: float
 
 
 class CrushMarginCalculator:
@@ -56,21 +64,32 @@ class CrushMarginCalculator:
 
         margin_per_bushel = total_revenue - corn_cost - gas_cost - misc_cost
         margin_per_gallon = margin_per_bushel / self._config.ethanol_gallons_per_bushel
-        ethanol_net_per_bushel = total_revenue / self._config.ethanol_gallons_per_bushel
 
         return CrushMarginResult(
             margin_per_bushel=margin_per_bushel,
             margin_per_gallon=margin_per_gallon,
             corn_oil_included=corn_oil_included,
-            ethanol_net_per_bushel=ethanol_net_per_bushel,
         )
 
-    def calculate_spread(self, row: MergedDailyRow) -> float | None:
-        """Net ethanol value per bushel minus corn futures price."""
-        margin = self.calculate(row)
-        if margin is None or row.corn_usd_per_bushel is None:
+    def calculate_spread(self, row: MergedDailyRow) -> CrushSpreadResult | None:
+        """
+        CME-standard ethanol crush spread in $/bu-corn: 2.8 × ethanol − corn.
+
+        Uses the CARD dry-mill yield (ethanol_gallons_per_bushel) so that ethanol
+        $/gal and corn $/bu resolve to the same unit ($/bu of corn). Coproducts
+        (DDGS, corn oil) and costs (gas, opex) are excluded on purpose — that
+        richer view is the crush margin in `calculate()`. This spread mirrors the
+        exchange-listed crush and is the industry-standard input dislocation gauge.
+        """
+        if row.corn_usd_per_bushel is None or row.ethanol_usd_per_gallon is None:
             return None
-        return margin.ethanol_net_per_bushel - row.corn_usd_per_bushel
+        ethanol_leg = row.ethanol_usd_per_gallon * self._config.ethanol_gallons_per_bushel
+        corn_leg = row.corn_usd_per_bushel
+        return CrushSpreadResult(
+            spread_usd_per_bushel=ethanol_leg - corn_leg,
+            ethanol_leg_usd_per_bushel=ethanol_leg,
+            corn_leg_usd_per_bushel=corn_leg,
+        )
 
     @staticmethod
     def _has_required_inputs(row: MergedDailyRow) -> bool:

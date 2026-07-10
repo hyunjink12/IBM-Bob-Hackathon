@@ -31,6 +31,6 @@ export const dashboardConfig = {
     z_score: 'How today’s margin compares to the selected historical window.',
     signal_label: 'Rich / weak labels come from the z-score bands in config.',
     spread:
-      'Net ethanol coproduct value per bushel minus corn — flags corn vs output dislocation.',
+      'CME-standard ethanol crush spread: 2.8 × ethanol $/gal − corn $/bu (Iowa CARD dry-mill yield). Flags feedstock-vs-output dislocation without DDGS/gas/opex noise.',
   },
 }

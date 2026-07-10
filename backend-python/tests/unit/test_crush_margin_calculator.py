@@ -67,12 +67,57 @@ def test_ddgs_uses_short_ton_not_per_pound(
 
 
 @pytest.mark.unit
-def test_spread_is_net_ethanol_minus_corn(
+def test_spread_matches_cme_crush_formula(
     crush_config: CrushModelConfig,
     sample_row: MergedDailyRow,
 ) -> None:
     calculator = CrushMarginCalculator(crush_config)
     spread = calculator.calculate_spread(sample_row)
-    result = calculator.calculate(sample_row)
-    assert spread is not None and result is not None
-    assert spread == pytest.approx(result.ethanol_net_per_bushel - sample_row.corn_usd_per_bushel)
+    assert spread is not None
+
+    expected_ethanol_leg = (
+        sample_row.ethanol_usd_per_gallon * crush_config.ethanol_gallons_per_bushel
+    )
+    expected_corn_leg = sample_row.corn_usd_per_bushel
+    assert spread.ethanol_leg_usd_per_bushel == pytest.approx(expected_ethanol_leg)
+    assert spread.corn_leg_usd_per_bushel == pytest.approx(expected_corn_leg)
+    assert spread.spread_usd_per_bushel == pytest.approx(
+        expected_ethanol_leg - expected_corn_leg
+    )
+
+
+@pytest.mark.unit
+def test_spread_ignores_coproducts_and_costs(
+    crush_config: CrushModelConfig,
+    sample_row: MergedDailyRow,
+) -> None:
+    """The CME crush spread must not depend on DDGS, corn oil, gas, or opex."""
+    calculator = CrushMarginCalculator(crush_config)
+    baseline = calculator.calculate_spread(sample_row)
+    perturbed_row = MergedDailyRow(
+        **{
+            **sample_row.__dict__,
+            "ddgs_usd_per_short_ton": sample_row.ddgs_usd_per_short_ton * 2,
+            "corn_oil_usd_per_pound": None,
+            "nat_gas_usd_per_mmbtu": sample_row.nat_gas_usd_per_mmbtu * 3,
+        }
+    )
+    perturbed = calculator.calculate_spread(perturbed_row)
+    assert baseline is not None and perturbed is not None
+    assert baseline.spread_usd_per_bushel == pytest.approx(perturbed.spread_usd_per_bushel)
+
+
+@pytest.mark.unit
+def test_spread_returns_none_when_price_leg_missing(
+    crush_config: CrushModelConfig,
+    sample_row: MergedDailyRow,
+) -> None:
+    calculator = CrushMarginCalculator(crush_config)
+    missing_ethanol = MergedDailyRow(
+        **{**sample_row.__dict__, "ethanol_usd_per_gallon": None}
+    )
+    missing_corn = MergedDailyRow(
+        **{**sample_row.__dict__, "corn_usd_per_bushel": None}
+    )
+    assert calculator.calculate_spread(missing_ethanol) is None
+    assert calculator.calculate_spread(missing_corn) is None
