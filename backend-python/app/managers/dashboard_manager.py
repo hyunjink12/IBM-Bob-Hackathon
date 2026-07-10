@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 from app.managers.crush_margin_calculator import CrushMarginCalculator
+from app.managers.inventory_stress_manager import InventoryStressManager
 from app.managers.seed_data_status_manager import SeedDataStatusManager
 from app.managers.series_merge_manager import (
     SERIES_CORN,
@@ -58,12 +59,16 @@ class DashboardManager:
         repository: DuckDbRepository,
         crush_config: CrushModelConfig,
         seed_status_manager: SeedDataStatusManager | None = None,
+        inventory_stress_manager: InventoryStressManager | None = None,
     ) -> None:
         self._repository = repository
         self._margin_calculator = CrushMarginCalculator(crush_config)
         self._z_score_manager = ZScoreManager()
         self._seed_status_manager = seed_status_manager or SeedDataStatusManager(
             repository
+        )
+        self._inventory_stress_manager = (
+            inventory_stress_manager or InventoryStressManager()
         )
 
     def get_overview(self) -> dict:
@@ -144,12 +149,45 @@ class DashboardManager:
         return {"range": range_token, "series": series}
 
     def get_warnings(self) -> dict:
-        """Panel 4 payload with active warning cards."""
+        """
+        Panel 4 payload with stress snapshot plus active warning cards.
+
+        Casual: always send stocks/production context, not just empty alerts.
+
+        Calm markets used to return only ``warnings: []``, which made the UI
+        look broken. The stress snapshot keeps levels and deltas visible even
+        when no rule-based cards fire.
+
+        Warning cards are keyed to the latest day that has a computed margin
+        (same rule as ingest), which can lag the tip merged calendar day on
+        weekends/holidays when prices are missing.
+        """
         latest = self._repository.fetch_latest_merged_daily()
         if latest is None:
-            return {"as_of": None, "warnings": []}
-        warnings = self._repository.fetch_warning_signals_for_date(latest.obs_date)
-        return {"as_of": latest.obs_date.isoformat(), "warnings": warnings}
+            return {
+                "as_of": None,
+                "warnings": [],
+                "stress": self._inventory_stress_manager.build_snapshot(
+                    [], None, 0
+                ),
+            }
+
+        history = self._repository.fetch_merged_daily()
+        latest_margin = self._repository.fetch_latest_computed_margin()
+        warning_date = (
+            latest_margin.obs_date if latest_margin is not None else latest.obs_date
+        )
+        warnings = self._repository.fetch_warning_signals_for_date(warning_date)
+        stress = self._inventory_stress_manager.build_snapshot(
+            history,
+            latest_margin,
+            len(warnings),
+        )
+        return {
+            "as_of": latest.obs_date.isoformat(),
+            "warnings": warnings,
+            "stress": stress,
+        }
 
     def get_panel5_placeholder(self) -> dict:
         """Panel 5 placeholder until content is defined."""

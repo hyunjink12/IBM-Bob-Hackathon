@@ -228,6 +228,101 @@
 .warning-card--high { border-left-color: #f07178; }
 .warning-card--medium { border-left-color: #f0a878; }
 
+/* Always-on inventory/production strip so Panel 4 never looks empty. */
+.stress-snapshot {
+  margin-bottom: 0.9rem;
+  padding: 0.85rem 1rem;
+  background: #10141d;
+  border: 1px solid #242b38;
+  border-radius: 10px;
+}
+
+.stress-snapshot--calm {
+  border-color: #243528;
+}
+
+.stress-snapshot--watch {
+  border-color: #5a4020;
+}
+
+.stress-snapshot--stressed {
+  border-color: #5a2430;
+}
+
+.stress-snapshot__status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.stress-snapshot__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #242b38;
+  color: #9aa5b1;
+}
+
+.stress-snapshot--calm .stress-snapshot__badge {
+  background: #163a2d;
+  color: #3dd68c;
+}
+
+.stress-snapshot--watch .stress-snapshot__badge {
+  background: #3b2a1d;
+  color: #f0a878;
+}
+
+.stress-snapshot--stressed .stress-snapshot__badge {
+  background: #3b1d22;
+  color: #f07178;
+}
+
+.stress-snapshot__metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.stress-metric h3 {
+  margin: 0;
+  color: #7d8da6;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.stress-metric__value {
+  margin: 0.25rem 0 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.stress-metric__unit {
+  margin-left: 0.35rem;
+  color: #7d8da6;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.stress-metric__delta {
+  margin: 0.15rem 0 0;
+  color: #9aa5b1;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 640px) {
+  .stress-snapshot__metrics {
+    grid-template-columns: 1fr;
+  }
+}
+
 .metric-tooltip {
   position: relative;
   display: flex;

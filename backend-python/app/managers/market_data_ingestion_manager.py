@@ -174,16 +174,37 @@ class MarketDataIngestionManager:
 
         count = self._repository.replace_computed_margins(computed_rows)
 
-        if merged_rows and computed_rows:
-            latest_row = merged_rows[-1]
-            latest_margin = computed_rows[-1]
+        # Evaluate warnings against the latest day that actually has a margin —
+        # merged_rows[-1] and computed_rows[-1] can diverge when the tip day is
+        # missing prices (weekend/holiday) and margins stop earlier.
+        self._evaluate_latest_warnings(merged_rows, computed_rows)
+        return count
+
+    def _evaluate_latest_warnings(
+        self,
+        merged_rows: list,
+        computed_rows: list[ComputedMarginRow],
+    ) -> None:
+        """
+        Run warning rules for the newest day with both merge + margin rows.
+
+        Casual: only alert on a day we can actually score.
+        """
+        if not merged_rows or not computed_rows:
+            return
+
+        margin_by_date = {row.obs_date: row for row in computed_rows}
+        for merged_row in reversed(merged_rows):
+            margin_row = margin_by_date.get(merged_row.obs_date)
+            if margin_row is None:
+                continue
             self._warning_manager.evaluate_and_store(
-                latest_row,
-                latest_margin,
+                merged_row,
+                margin_row,
                 merged_rows,
                 computed_rows,
             )
-        return count
+            return
 
     def _should_fetch_live_futures(self) -> bool:
         """Skip slow Yahoo pulls during automated tests."""
