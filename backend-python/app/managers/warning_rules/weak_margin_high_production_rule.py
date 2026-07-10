@@ -3,7 +3,12 @@
 from __future__ import annotations
 
 from app.managers.warning_rules.base_rule import WarningRule, WarningSignal
+from app.managers.warning_rules.bullish_margin_setup_rule import _percentile
 from app.storage.duckdb_repository import ComputedMarginRow, MergedDailyRow
+
+_HIGH_PERCENTILE = 0.80
+_LOOKBACK_DAYS = 180
+_MIN_OBSERVATIONS = 60
 
 
 class WeakMarginHighProductionRule(WarningRule):
@@ -34,8 +39,12 @@ class WeakMarginHighProductionRule(WarningRule):
             signal_type=self.signal_type,
             severity="medium",
             message=(
-                "Crush margins are weak while ethanol production remains elevated. "
-                "Run-rate cuts may be ahead, tightening ethanol supply."
+                "Crush margins are weak while ethanol production sits in the top 20% "
+                "of its 180-day range. Run-rate cuts may be ahead, tightening ethanol supply."
+            ),
+            suggested_trade=(
+                "Short corn / long ethanol, or outright long ethanol if forward production "
+                "cuts are not yet priced in."
             ),
             metadata={"production_mbpd": latest_row.ethanol_production_mbpd},
         )
@@ -44,14 +53,12 @@ class WeakMarginHighProductionRule(WarningRule):
     def _production_elevated(
         history: list[MergedDailyRow],
         current_production: float,
-        lookback_days: int = 180,
     ) -> bool:
-        rows = [
+        values = [
             row.ethanol_production_mbpd
-            for row in history[-lookback_days:]
+            for row in history[-_LOOKBACK_DAYS:]
             if row.ethanol_production_mbpd is not None
         ]
-        if len(rows) < 20:
+        if len(values) < _MIN_OBSERVATIONS:
             return False
-        average_production = sum(rows) / len(rows)
-        return current_production >= average_production
+        return current_production >= _percentile(values, _HIGH_PERCENTILE)
