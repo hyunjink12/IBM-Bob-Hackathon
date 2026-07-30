@@ -136,6 +136,23 @@
   font-size: 0.85rem;
 }
 
+.panel__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #7d8da6;
+}
+
+.panel__controls select {
+  background: #1a2030;
+  color: #e6edf3;
+  border: 1px solid #2a3140;
+  border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.85rem;
+}
+
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
