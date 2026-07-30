@@ -21,16 +21,21 @@ def create_dashboard_router(dashboard_manager: DashboardManager) -> APIRouter:
         range: str = Query(default="1Y", alias="range"),
         windowType: str = Query(default="rolling"),
         lookbackDays: int = Query(default=1825),
+        granularity: str = Query(default="daily"),
     ) -> dict:
         return dashboard_manager.get_margins(
             range_token=range,
             window_type=windowType,
             lookback_days=lookbackDays,
+            granularity=granularity,
         )
 
     @router.get("/spread")
-    def read_spread(range: str = Query(default="1Y", alias="range")) -> dict:
-        return dashboard_manager.get_spread(range_token=range)
+    def read_spread(
+        range: str = Query(default="1Y", alias="range"),
+        granularity: str = Query(default="daily"),
+    ) -> dict:
+        return dashboard_manager.get_spread(range_token=range, granularity=granularity)
 
     @router.get("/warnings")
     def read_warnings() -> dict:
