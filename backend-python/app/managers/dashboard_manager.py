@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
+from typing import Any
 
 from app.managers.crush_margin_calculator import CrushMarginCalculator
 from app.managers.inventory_stress_manager import InventoryStressManager
@@ -25,6 +26,52 @@ from app.managers.series_merge_manager import (
 from app.managers.z_score_manager import ZScoreManager
 from app.models.crush_model_config import CrushModelConfig
 from app.storage.duckdb_repository import DuckDbRepository
+
+
+_VALID_GRANULARITIES: frozenset[str] = frozenset({"daily", "weekly", "monthly"})
+
+
+def _period_key(iso_date: str, granularity: str) -> tuple:
+    """
+    Bucket key for downsampling: (year, iso_week) or (year, month) or the date itself.
+
+    Casual: which weekly/monthly bin does this row belong to?
+    """
+    obs_date = date.fromisoformat(iso_date)
+    if granularity == "weekly":
+        year, week, _ = obs_date.isocalendar()
+        return ("weekly", year, week)
+    if granularity == "monthly":
+        return ("monthly", obs_date.year, obs_date.month)
+    return ("daily", obs_date.toordinal())
+
+
+def _downsample_series(
+    series: list[dict[str, Any]],
+    granularity: str,
+) -> list[dict[str, Any]]:
+    """
+    Keep the last observation per period for weekly/monthly; pass-through for daily.
+
+    Casual: one point per week/month = the Friday/month-end print, not an average.
+
+    Uses "last obs of period" so what the chart shows on 2026-W28 is literally the
+    daily row that landed on the last available day of that ISO week. This matches
+    OHLC-style close-of-period convention traders read intuitively. Z-scores and
+    signal labels are carried through unchanged — they were computed at daily
+    cadence and remain the honest value at that checkpoint day.
+    """
+    if granularity == "daily" or not series:
+        return series
+    if granularity not in _VALID_GRANULARITIES:
+        return series
+
+    # Series is already date-ordered ascending from the SQL query, so the last
+    # row we see per bucket key IS the last observation of that period.
+    last_by_bucket: dict[tuple, dict[str, Any]] = {}
+    for row in series:
+        last_by_bucket[_period_key(row["date"], granularity)] = row
+    return sorted(last_by_bucket.values(), key=lambda item: item["date"])
 
 
 class DashboardManager:
@@ -111,29 +158,43 @@ class DashboardManager:
         range_token: str = "1Y",
         window_type: str = "rolling",
         lookback_days: int = 1825,
+        granularity: str = "daily",
     ) -> dict:
-        """Panel 2 payload with margin series and current signal."""
+        """
+        Panel 2 payload with margin series and current signal.
+
+        `granularity` in {"daily","weekly","monthly"} downsamples to the last
+        observation of each period. Z-scores and signal labels are the underlying
+        daily values on the checkpoint day — not recomputed at coarser cadence.
+        """
         start_date, end_date = self._resolve_date_range(range_token)
         margins = self._repository.fetch_computed_margins(start_date, end_date)
         latest = margins[-1] if margins else None
+        series = [
+            {
+                "date": row.obs_date.isoformat(),
+                "margin_per_bushel": row.margin_per_bushel,
+                "margin_per_gallon": row.margin_per_gallon,
+                "z_score": row.z_score,
+                "signal_label": row.signal_label,
+            }
+            for row in margins
+        ]
         return {
             "range": range_token,
             "window_type": window_type,
             "lookback_days": lookback_days,
+            "granularity": granularity,
             "current": self._margin_snapshot(latest),
-            "series": [
-                {
-                    "date": row.obs_date.isoformat(),
-                    "margin_per_bushel": row.margin_per_bushel,
-                    "margin_per_gallon": row.margin_per_gallon,
-                    "z_score": row.z_score,
-                    "signal_label": row.signal_label,
-                }
-                for row in margins
-            ],
+            "series": _downsample_series(series, granularity),
         }
 
-    def get_spread(self, *, range_token: str = "1Y") -> dict:
+    def get_spread(
+        self,
+        *,
+        range_token: str = "1Y",
+        granularity: str = "daily",
+    ) -> dict:
         """
         Panel 3 payload with the CME-standard ethanol crush spread.
 
@@ -180,7 +241,12 @@ class DashboardManager:
                 }
             )
         current = series[-1] if series else None
-        return {"range": range_token, "series": series, "current": current}
+        return {
+            "range": range_token,
+            "granularity": granularity,
+            "series": _downsample_series(series, granularity),
+            "current": current,
+        }
 
     def get_warnings(self) -> dict:
         """
