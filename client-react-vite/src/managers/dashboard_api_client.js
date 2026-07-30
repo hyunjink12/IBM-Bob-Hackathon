@@ -12,17 +12,19 @@ export class DashboardApiClient {
     return this._get('/api/dashboard/overview')
   }
 
-  async fetchMargins({ range, windowType, lookbackDays }) {
+  async fetchMargins({ range, windowType, lookbackDays, granularity }) {
     const params = new URLSearchParams({
       range,
       windowType,
       lookbackDays: String(lookbackDays),
+      granularity,
     })
     return this._get(`/api/dashboard/margins?${params}`)
   }
 
-  async fetchSpread({ range }) {
-    return this._get(`/api/dashboard/spread?range=${encodeURIComponent(range)}`)
+  async fetchSpread({ range, granularity }) {
+    const params = new URLSearchParams({ range, granularity })
+    return this._get(`/api/dashboard/spread?${params}`)
   }
 
   async fetchWarnings() {
