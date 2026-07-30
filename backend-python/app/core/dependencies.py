@@ -119,13 +119,8 @@ def ensure_data_bootstrapped() -> None:
         ingestion_manager.run_full_pipeline()
 
     # Warm up the briefing after ingest so the first dashboard request hits
-    # the DB cache rather than blocking on a Granite API call.
+    # the DB cache rather than blocking on a Granite API call. Manager derives
+    # its own cache key from the latest ingestion run.
     briefing_manager = build_briefing_manager()
     if briefing_manager.is_available:
-        latest_ingest = repository.get_latest_ingestion_run()
-        cache_key = (
-            latest_ingest["finished_at"].isoformat()
-            if latest_ingest and latest_ingest.get("finished_at")
-            else None
-        )
-        briefing_manager.get_or_generate(ingest_cache_key=cache_key)
+        briefing_manager.get_or_generate()
