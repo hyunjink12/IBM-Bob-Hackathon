@@ -5,6 +5,12 @@
 export const dashboardConfig = {
   defaultChartRange: '1Y',
   chartRanges: ['1Y', '2Y', '5Y', 'ALL'],
+  defaultGranularity: 'daily',
+  granularities: [
+    { value: 'daily', label: 'Daily' },
+    { value: 'weekly', label: 'Weekly' },
+    { value: 'monthly', label: 'Monthly' },
+  ],
   zScore: {
     defaultLookbackDays: 1825,
     defaultWindowType: 'rolling',
