@@ -5,7 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from app.clients.eia_client import EiaClient
+from app.clients.watsonx_client import WatsonxClient
 from app.core.app_settings import AppSettings
+from app.managers.briefing_manager import BriefingManager
 from app.managers.dashboard_manager import DashboardManager
 from app.managers.market_data_ingestion_manager import MarketDataIngestionManager
 from app.models.crush_model_config import CrushModelConfig
@@ -68,6 +70,25 @@ def build_dashboard_manager() -> DashboardManager:
     return DashboardManager(
         repository=get_repository(),
         crush_config=resolve_crush_config(settings),
+    )
+
+
+def build_watsonx_client() -> WatsonxClient:
+    """Construct the watsonx.ai client from settings."""
+    settings = get_settings()
+    return WatsonxClient(
+        api_key=settings.watsonx_api_key,
+        project_id=settings.watsonx_project_id,
+        base_url=settings.watsonx_url,
+        model_id=settings.watsonx_model_id,
+    )
+
+
+def build_briefing_manager() -> BriefingManager:
+    """Construct the Granite briefing manager."""
+    return BriefingManager(
+        repository=get_repository(),
+        watsonx_client=build_watsonx_client(),
     )
 
 

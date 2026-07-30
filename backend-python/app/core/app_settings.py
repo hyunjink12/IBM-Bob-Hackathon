@@ -28,3 +28,7 @@ class AppSettings(BaseSettings):
     admin_token: str = ""
     duckdb_path: str = "data/ethanol_dashboard.duckdb"
     crush_model_path: str = "../config/crush_model.json"
+    watsonx_api_key: str = ""
+    watsonx_project_id: str = ""
+    watsonx_url: str = "https://us-south.ml.cloud.ibm.com"
+    watsonx_model_id: str = "ibm/granite-3-8b-instruct"

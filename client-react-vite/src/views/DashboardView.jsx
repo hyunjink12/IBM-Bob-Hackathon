@@ -1,5 +1,6 @@
 import { useDashboardViewModel } from '../viewmodels/dashboard_view_model.js'
 import { SeedDataWarningBanner } from '../components/SeedDataWarningBanner.jsx'
+import { BriefingStrip } from './BriefingStrip.jsx'
 import { MethodologyFooter } from './MethodologyFooter.jsx'
 import { CornEthanolSpreadPanel } from './panels/CornEthanolSpreadPanel.jsx'
 import { CrushMarginPanel } from './panels/CrushMarginPanel.jsx'
@@ -22,6 +23,7 @@ export function DashboardView() {
     spread,
     warnings,
     backtest,
+    briefing,
     loading,
     error,
     refresh,
@@ -43,6 +45,8 @@ export function DashboardView() {
           </button>
         </div>
       </header>
+
+      <BriefingStrip briefing={briefing} />
 
       {loading && <p className="dashboard__status">Loading dashboard…</p>}
       {error && <p className="dashboard__error">{error}</p>}

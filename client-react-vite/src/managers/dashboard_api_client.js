@@ -27,6 +27,10 @@ export class DashboardApiClient {
     return this._get(`/api/dashboard/spread?${params}`)
   }
 
+  async fetchBriefing() {
+    return this._get('/api/dashboard/briefing')
+  }
+
   async fetchWarnings() {
     return this._get('/api/dashboard/warnings')
   }

@@ -4,11 +4,15 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 
+from app.managers.briefing_manager import BriefingManager
 from app.managers.dashboard_manager import DashboardManager
 from app.managers.market_data_ingestion_manager import MarketDataIngestionManager
 
 
-def create_dashboard_router(dashboard_manager: DashboardManager) -> APIRouter:
+def create_dashboard_router(
+    dashboard_manager: DashboardManager,
+    briefing_manager: BriefingManager,
+) -> APIRouter:
     """Build dashboard read endpoints consumed by the React client."""
     router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
@@ -44,6 +48,23 @@ def create_dashboard_router(dashboard_manager: DashboardManager) -> APIRouter:
     @router.get("/backtest")
     def read_backtest() -> dict:
         return dashboard_manager.get_backtest()
+
+    @router.get("/briefing")
+    def read_briefing() -> dict:
+        """
+        Granite-generated natural-language signal briefing.
+
+        Cached per ingest run; regenerated automatically after new data lands.
+        Returns ``text: null`` and ``unavailable_reason`` when watsonx.ai is
+        not configured — the frontend hides the strip gracefully.
+        """
+        latest_ingest = dashboard_manager._repository.get_latest_ingestion_run()
+        cache_key = (
+            latest_ingest.get("finished_at").isoformat()
+            if latest_ingest and latest_ingest.get("finished_at")
+            else None
+        )
+        return briefing_manager.get_or_generate(ingest_cache_key=cache_key)
 
     return router
 

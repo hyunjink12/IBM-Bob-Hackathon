@@ -12,6 +12,7 @@ from app.api.health_router import create_health_router
 from app.api.hello_router import create_hello_router
 from app.core.app_settings import AppSettings
 from app.core.dependencies import (
+    build_briefing_manager,
     build_dashboard_manager,
     build_ingestion_manager,
     configure_runtime,
@@ -89,6 +90,7 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
     )
     hello_manager = HelloManager()
     dashboard_manager = build_dashboard_manager()
+    briefing_manager = build_briefing_manager()
     ingestion_manager = build_ingestion_manager()
 
     app = FastAPI(
@@ -111,7 +113,7 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
 
     app.include_router(create_health_router(health_manager))
     app.include_router(create_hello_router(hello_manager))
-    app.include_router(create_dashboard_router(dashboard_manager))
+    app.include_router(create_dashboard_router(dashboard_manager, briefing_manager))
     app.include_router(
         create_admin_router(ingestion_manager, resolved_settings.admin_token)
     )

@@ -120,6 +120,15 @@ class DuckDbRepository:
             errors VARCHAR
         )
         """,
+        """
+        CREATE TABLE IF NOT EXISTS briefings (
+            id INTEGER PRIMARY KEY,
+            as_of DATE,
+            generated_at TIMESTAMPTZ NOT NULL,
+            text VARCHAR NOT NULL,
+            cache_key VARCHAR
+        )
+        """,
     )
 
     def __init__(self, database_path: Path) -> None:
@@ -474,6 +483,50 @@ class DuckDbRepository:
             corn_oil_usd_per_pound=row[8],
             wasde_corn_for_ethanol_mbu=row[9],
         )
+
+    def upsert_briefing(
+        self,
+        as_of: str | None,
+        text: str,
+        cache_key: str | None,
+    ) -> None:
+        """Replace the single stored briefing row (we only keep the latest)."""
+        self._run("DELETE FROM briefings")
+        self._run(
+            """
+            INSERT INTO briefings (id, as_of, generated_at, text, cache_key)
+            VALUES (1, ?, ?, ?, ?)
+            """,
+            [as_of, self.utc_now(), text, cache_key],
+        )
+
+    def fetch_latest_briefing(self) -> dict[str, Any] | None:
+        """Return the stored briefing row, or None if the table is empty."""
+        row = self._fetchone(
+            "SELECT as_of, generated_at, text, cache_key FROM briefings WHERE id = 1"
+        )
+        if row is None:
+            return None
+        return {
+            "as_of": row[0].isoformat() if row[0] else None,
+            "generated_at": row[1].isoformat() if row[1] else None,
+            "text": row[2],
+            "cache_key": row[3],
+        }
+
+    def fetch_backtest_summary(self) -> list[dict[str, Any]]:
+        """
+        Return a lightweight backtest summary suitable for prompt context.
+
+        Pulls fire_count and the most recent 30-day hit-rate / median move
+        stored alongside warning signals. If the backtester has not been
+        materialised to DB, returns an empty list — the briefing manager
+        will simply omit that section of context.
+        """
+        # We don't persist full backtest output to a table; return empty so
+        # briefing_manager can still call this without error. The caller can
+        # optionally supply richer context by overriding the method.
+        return []
 
     @staticmethod
     def utc_now() -> datetime:

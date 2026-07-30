@@ -411,3 +411,77 @@
 .empty-state {
   color: #7d8da6;
 }
+
+/* ------------------------------------------------------------------ */
+/* Briefing strip — IBM Granite daily signal narration                 */
+/* ------------------------------------------------------------------ */
+
+.briefing-strip {
+  margin-bottom: 1.25rem;
+  background: #0e1420;
+  border: 1px solid #1e2d4a;
+  border-left: 4px solid #0f62fe;
+  border-radius: 10px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.briefing-strip__inner {
+  padding: 0.85rem 1.25rem 0.95rem;
+}
+
+.briefing-strip__label-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.briefing-strip__eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #4d8aff;
+}
+
+.briefing-strip__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  background: #0f2a5e;
+  color: #90b8ff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.briefing-strip__icon {
+  flex-shrink: 0;
+}
+
+.briefing-strip__cached-pill {
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: #1a2230;
+  color: #7d8da6;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.briefing-strip__text {
+  margin: 0;
+  color: #c9d6e8;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  max-width: 90ch;
+}
+
+.briefing-strip__meta {
+  margin: 0.45rem 0 0;
+  color: #7d8da6;
+  font-size: 0.75rem;
+}

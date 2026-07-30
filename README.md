@@ -1,4 +1,4 @@
-# IBM-Bob-Hackathon — Ethanol Crush Margin Dashboard
+# IBM-Bob — Ethanol Crush Margin Dashboard
 
 Decision-support dashboard for corn ethanol crush margins, z-scores, and warning signals.
 
