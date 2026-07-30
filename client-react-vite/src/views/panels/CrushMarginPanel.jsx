@@ -4,7 +4,14 @@ import { TimeSeriesChart } from '../../components/TimeSeriesChart.jsx'
 /**
  * Panel 2 — crush margin centerpiece with z-score and signal label.
  */
-export function CrushMarginPanel({ margins, config }) {
+export function CrushMarginPanel({
+  margins,
+  config,
+  chartRange,
+  onChartRangeChange,
+  chartGranularity,
+  onChartGranularityChange,
+}) {
   if (!margins) {
     return <section className="panel">Loading crush margin…</section>
   }
@@ -16,7 +23,36 @@ export function CrushMarginPanel({ margins, config }) {
     <section className="panel panel--hero">
       <header className="panel__header">
         <h2>Ethanol Crush Margin</h2>
-        <span className="panel__meta">Range: {margins.range}</span>
+        {onChartRangeChange ? (
+          <div className="panel__controls">
+            <label htmlFor="crush-margin-granularity">Granularity</label>
+            <select
+              id="crush-margin-granularity"
+              value={chartGranularity}
+              onChange={(event) => onChartGranularityChange(event.target.value)}
+            >
+              {config.granularities.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <label htmlFor="crush-margin-range">Range</label>
+            <select
+              id="crush-margin-range"
+              value={chartRange}
+              onChange={(event) => onChartRangeChange(event.target.value)}
+            >
+              {config.chartRanges.map((range) => (
+                <option key={range} value={range}>
+                  {range}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <span className="panel__meta">Range: {margins.range}</span>
+        )}
       </header>
 
       {current && (
