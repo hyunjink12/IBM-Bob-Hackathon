@@ -18,6 +18,9 @@ export function useDashboardViewModel(apiClient) {
   )
 
   const [chartRange, setChartRange] = useState(dashboardConfig.defaultChartRange)
+  const [chartGranularity, setChartGranularity] = useState(
+    dashboardConfig.defaultGranularity,
+  )
   const [overview, setOverview] = useState(null)
   const [margins, setMargins] = useState(null)
   const [spread, setSpread] = useState(null)
@@ -31,8 +34,9 @@ export function useDashboardViewModel(apiClient) {
       range: chartRange,
       windowType: dashboardConfig.zScore.defaultWindowType,
       lookbackDays: dashboardConfig.zScore.defaultLookbackDays,
+      granularity: chartGranularity,
     }),
-    [chartRange],
+    [chartRange, chartGranularity],
   )
 
   const refresh = useCallback(async () => {
@@ -43,7 +47,7 @@ export function useDashboardViewModel(apiClient) {
         await Promise.all([
           client.fetchOverview(),
           client.fetchMargins(queryParams),
-          client.fetchSpread({ range: chartRange }),
+          client.fetchSpread({ range: chartRange, granularity: chartGranularity }),
           client.fetchWarnings(),
           client.fetchBacktest(),
         ])
@@ -57,7 +61,7 @@ export function useDashboardViewModel(apiClient) {
     } finally {
       setLoading(false)
     }
-  }, [client, chartRange, queryParams])
+  }, [client, chartRange, chartGranularity, queryParams])
 
   useEffect(() => {
     refresh()
@@ -66,6 +70,8 @@ export function useDashboardViewModel(apiClient) {
   return {
     chartRange,
     setChartRange,
+    chartGranularity,
+    setChartGranularity,
     overview,
     margins,
     spread,
