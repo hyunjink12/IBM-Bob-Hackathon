@@ -44,12 +44,11 @@ npm run dev
 
 Vite prints the actual URL it bound to — usually `http://localhost:5173`, but **if 5173 is already in use it silently picks 5174, 5175, …** so read the terminal, don't assume. Open that URL in the browser.
 
-### Common gotchas
+### Notice
 
 - **"SYNTHETIC SEED DATA" banner won't go away after adding the EIA key.** The backend loads `.env` once at startup — restart the uvicorn process after editing `.env`. If the banner still shows, hit `POST /api/admin/ingest` (see below) or restart with an empty `data/` folder.
 - **Yahoo Finance rate limits.** Repeatedly restarting the backend can trip Yahoo's per-IP throttle. Symptoms: `Error fetching ZC=F: Too Many Requests` in the terminal. Not fatal — the app keeps serving whatever prices are already in DuckDB. Wait 15–60 minutes or switch networks (e.g. phone hotspot) for a fresh IP.
 - **Port 8000 collides with Docker Desktop.** If Docker is running, it may hold port 8000. Quit Docker or run the backend on a different port and update `VITE_API_BASE_URL` accordingly.
-- **`.env` should never be committed.** The template is `.env.example`; the real file is git-ignored. If you edit `.env`, `git status` should never show it as modified.
 
 ## Daily ingestion
 
