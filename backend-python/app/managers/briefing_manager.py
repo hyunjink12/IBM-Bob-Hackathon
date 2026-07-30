@@ -7,6 +7,7 @@ import logging
 from datetime import date
 
 from app.clients.watsonx_client import WatsonxClient
+from app.managers.warning_backtester import RuleBacktestReport, WarningRuleBacktester
 from app.storage.duckdb_repository import DuckDbRepository
 
 _logger = logging.getLogger(__name__)
@@ -65,8 +66,9 @@ class BriefingManager:
         """
         Return a cached briefing if current, otherwise generate a fresh one.
 
-        ``ingest_cache_key`` should be the ISO timestamp of the latest ingestion
-        run so the cache invalidates automatically after new data lands.
+        ``ingest_cache_key`` is optional — when omitted, the manager derives it
+        from the latest ingestion run so callers (like the API route) don't
+        need to reach into repository internals.
         Returns ``{"as_of": ..., "text": ..., "cached": bool}``.
         """
         if not self.is_available:
@@ -76,6 +78,9 @@ class BriefingManager:
                 "cached": False,
                 "unavailable_reason": "watsonx.ai not configured — set APP_WATSONX_API_KEY and APP_WATSONX_PROJECT_ID",
             }
+
+        if ingest_cache_key is None:
+            ingest_cache_key = self._current_ingest_cache_key()
 
         # Check DB cache first.
         cached = self._repository.fetch_latest_briefing()
@@ -165,6 +170,18 @@ class BriefingManager:
             "active_warnings": warnings_ctx,
             "rule_track_records": backtest_ctx,
         }
+
+    def _current_ingest_cache_key(self) -> str | None:
+        """
+        Derive the cache key from the latest completed ingestion run.
+
+        Encapsulated here so the API route doesn't reach into repository
+        internals — the manager owns its own cache invalidation logic.
+        """
+        latest_ingest = self._repository.get_latest_ingestion_run()
+        if not latest_ingest or not latest_ingest.get("finished_at"):
+            return None
+        return latest_ingest["finished_at"].isoformat()
 
 
 def _report_to_briefing_context(report: RuleBacktestReport) -> dict:
