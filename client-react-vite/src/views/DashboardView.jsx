@@ -15,6 +15,8 @@ export function DashboardView() {
   const {
     chartRange,
     setChartRange,
+    chartGranularity,
+    setChartGranularity,
     overview,
     margins,
     spread,
@@ -36,18 +38,6 @@ export function DashboardView() {
           <h1>Ethanol Crush Margin Dashboard</h1>
         </div>
         <div className="dashboard__controls">
-          <label htmlFor="chart-range">Range</label>
-          <select
-            id="chart-range"
-            value={chartRange}
-            onChange={(event) => setChartRange(event.target.value)}
-          >
-            {config.chartRanges.map((range) => (
-              <option key={range} value={range}>
-                {range}
-              </option>
-            ))}
-          </select>
           <button type="button" onClick={refresh}>
             Refresh
           </button>
@@ -59,7 +49,14 @@ export function DashboardView() {
 
       <main className="dashboard__grid">
         <MarketOverviewPanel overview={overview} />
-        <CrushMarginPanel margins={margins} config={config} />
+        <CrushMarginPanel
+          margins={margins}
+          config={config}
+          chartRange={chartRange}
+          onChartRangeChange={setChartRange}
+          chartGranularity={chartGranularity}
+          onChartGranularityChange={setChartGranularity}
+        />
         <CornEthanolSpreadPanel spread={spread} config={config} />
         <WarningSignalsPanel warnings={warnings} backtest={backtest} />
       </main>
