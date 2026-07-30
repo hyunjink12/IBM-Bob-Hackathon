@@ -64,12 +64,19 @@ def build_ingestion_manager() -> MarketDataIngestionManager:
     )
 
 
+def _build_shared_backtester() -> "WarningRuleBacktester":
+    """Build a backtester wired to the shared repository."""
+    from app.managers.warning_backtester import WarningRuleBacktester
+    return WarningRuleBacktester(get_repository())
+
+
 def build_dashboard_manager() -> DashboardManager:
-    """Construct the dashboard read model."""
+    """Construct the dashboard read model with the shared backtester."""
     settings = get_settings()
     return DashboardManager(
         repository=get_repository(),
         crush_config=resolve_crush_config(settings),
+        backtester=_build_shared_backtester(),
     )
 
 
@@ -85,16 +92,18 @@ def build_watsonx_client() -> WatsonxClient:
 
 
 def build_briefing_manager() -> BriefingManager:
-    """Construct the Granite briefing manager."""
+    """Construct the Granite briefing manager with the shared backtester."""
     return BriefingManager(
         repository=get_repository(),
         watsonx_client=build_watsonx_client(),
+        backtester=_build_shared_backtester(),
     )
 
 
 def ensure_data_bootstrapped() -> None:
     """
-    Seed an empty database or refresh live Yahoo/EIA feeds on startup.
+    Seed an empty database or refresh live Yahoo/EIA feeds on startup,
+    then warm up the Granite briefing cache so the first page load doesn't wait.
 
     Casual: first launch seeds data; later launches pull fresh futures (and EIA
     when a key is set) so the dashboard is not stuck on synthetic numbers.
@@ -108,3 +117,15 @@ def ensure_data_bootstrapped() -> None:
     should_refresh_eia = ingestion_manager.should_refresh_live_data_on_startup()
     if is_empty or should_refresh_eia:
         ingestion_manager.run_full_pipeline()
+
+    # Warm up the briefing after ingest so the first dashboard request hits
+    # the DB cache rather than blocking on a Granite API call.
+    briefing_manager = build_briefing_manager()
+    if briefing_manager.is_available:
+        latest_ingest = repository.get_latest_ingestion_run()
+        cache_key = (
+            latest_ingest["finished_at"].isoformat()
+            if latest_ingest and latest_ingest.get("finished_at")
+            else None
+        )
+        briefing_manager.get_or_generate(ingest_cache_key=cache_key)

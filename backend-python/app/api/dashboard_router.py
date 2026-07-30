@@ -58,12 +58,7 @@ def create_dashboard_router(
         Returns ``text: null`` and ``unavailable_reason`` when watsonx.ai is
         not configured — the frontend hides the strip gracefully.
         """
-        latest_ingest = dashboard_manager._repository.get_latest_ingestion_run()
-        cache_key = (
-            latest_ingest.get("finished_at").isoformat()
-            if latest_ingest and latest_ingest.get("finished_at")
-            else None
-        )
+        cache_key = dashboard_manager.get_latest_ingest_cache_key()
         return briefing_manager.get_or_generate(ingest_cache_key=cache_key)
 
     return router

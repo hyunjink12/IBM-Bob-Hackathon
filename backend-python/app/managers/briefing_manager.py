@@ -46,9 +46,15 @@ class BriefingManager:
     ingest-run timestamp so we don't burn tokens on unchanged state.
     """
 
-    def __init__(self, repository: DuckDbRepository, watsonx_client: WatsonxClient) -> None:
+    def __init__(
+        self,
+        repository: DuckDbRepository,
+        watsonx_client: WatsonxClient,
+        backtester: WarningRuleBacktester | None = None,
+    ) -> None:
         self._repository = repository
         self._watsonx = watsonx_client
+        self._backtester = backtester or WarningRuleBacktester(repository)
 
     @property
     def is_available(self) -> bool:
@@ -106,7 +112,7 @@ class BriefingManager:
     # ------------------------------------------------------------------
 
     def _build_context(self) -> dict:
-        """Pull latest margin, spread, warnings, and backtest into one dict."""
+        """Pull latest margin, prices, warnings, and real backtest stats into one dict."""
         latest_margin = self._repository.fetch_latest_computed_margin()
         latest_merged = self._repository.fetch_latest_merged_daily()
 
@@ -146,17 +152,10 @@ class BriefingManager:
             for w in warnings_raw
         ]
 
-        # Backtest summary — hit rates only, no raw firings (keeps prompt small).
-        backtest_rows = self._repository.fetch_backtest_summary()
+        # Real backtest stats — run the full replay (fast: hits in-memory cache on
+        # DashboardManager if it already ran, or builds a fresh one here).
         backtest_ctx = [
-            {
-                "signal_type": row["signal_type"],
-                "fire_count": row["fire_count"],
-                "hit_rate_30d": row.get("hit_rate_30d"),
-                "median_move_30d_usd": row.get("median_move_30d_usd"),
-                "expected_direction": row.get("expected_direction"),
-            }
-            for row in backtest_rows
+            _report_to_briefing_context(r) for r in self._backtester.run()
         ]
 
         return {
@@ -166,3 +165,21 @@ class BriefingManager:
             "active_warnings": warnings_ctx,
             "rule_track_records": backtest_ctx,
         }
+
+
+def _report_to_briefing_context(report: RuleBacktestReport) -> dict:
+    """
+    Extract the prompt-relevant slice of a backtest report.
+
+    Keeps the payload small: one row per rule, 30d horizon only,
+    no raw firing dates (irrelevant to the prose model).
+    """
+    return {
+        "signal_type": report.signal_type,
+        "expected_direction": report.expected_direction,
+        "fire_count": report.fire_count,
+        "hit_rate_30d": report.hit_rate_by_horizon.get(30),
+        "median_move_30d_usd": report.median_move_by_horizon.get(30),
+        "p25_move_30d_usd": report.p25_move_by_horizon.get(30),
+        "p75_move_30d_usd": report.p75_move_by_horizon.get(30),
+    }

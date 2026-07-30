@@ -289,6 +289,13 @@ class DashboardManager:
             "stress": stress,
         }
 
+    def get_latest_ingest_cache_key(self) -> str | None:
+        """Return the ISO timestamp of the last finished ingestion run, or None."""
+        latest_ingest = self._repository.get_latest_ingestion_run()
+        if latest_ingest and latest_ingest.get("finished_at"):
+            return latest_ingest["finished_at"].isoformat()
+        return None
+
     def get_backtest(self) -> dict:
         """
         Backtest reports for each warning rule, cached per ingestion run.
@@ -299,12 +306,7 @@ class DashboardManager:
         replay 5Y of history on every dashboard page load. Invalidates
         automatically after a new ingest.
         """
-        latest_ingest = self._repository.get_latest_ingestion_run()
-        cache_key = (
-            latest_ingest.get("finished_at").isoformat()
-            if latest_ingest and latest_ingest.get("finished_at")
-            else None
-        )
+        cache_key = self.get_latest_ingest_cache_key()
         if self._backtest_cache is None or self._backtest_cache[0] != cache_key:
             reports = self._backtester.run()
             self._backtest_cache = (cache_key, reports)
