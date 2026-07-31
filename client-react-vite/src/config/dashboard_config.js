@@ -4,13 +4,20 @@
  */
 export const dashboardConfig = {
   defaultChartRange: '1Y',
-  chartRanges: ['1Y', '2Y', '5Y', 'ALL'],
+  chartRanges: ['1W', '1M', '3M', '6M', 'YTD', '1Y', '2Y', '5Y', 'ALL'],
   defaultGranularity: 'daily',
   granularities: [
     { value: 'daily', label: 'Daily' },
     { value: 'weekly', label: 'Weekly' },
     { value: 'monthly', label: 'Monthly' },
   ],
+  // Minimum range span (days) each granularity needs to plot enough bars.
+  // Weekly wants ~4 bars → 1M+. Monthly wants ~4 bars → 6M+.
+  granularityMinDays: {
+    daily: 0,
+    weekly: 30,
+    monthly: 180,
+  },
   zScore: {
     defaultLookbackDays: 1825,
     defaultWindowType: 'rolling',

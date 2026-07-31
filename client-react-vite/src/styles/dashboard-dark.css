@@ -369,6 +369,17 @@
   width: 100%;
 }
 
+/* Drag-to-zoom selection overlay — visible on the dark theme. */
+.chart-shell .u-select {
+  background: rgba(69, 137, 255, 0.18);
+  border-left: 1px solid rgba(69, 137, 255, 0.65);
+  border-right: 1px solid rgba(69, 137, 255, 0.65);
+}
+
+.chart-shell .u-over {
+  cursor: crosshair;
+}
+
 .warning-grid {
   display: grid;
   gap: 0.75rem;

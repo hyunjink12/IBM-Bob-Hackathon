@@ -50,6 +50,29 @@ export function useDashboardViewModel(apiClient) {
   const [chartGranularity, setChartGranularity] = useState(
     dashboardConfig.defaultGranularity,
   )
+
+  const changeChartRange = useCallback((nextRange) => {
+    setChartRange(nextRange)
+    setChartGranularity((currentGranularity) =>
+      isGranularityAllowedForRange(currentGranularity, nextRange)
+        ? currentGranularity
+        : widestAllowedGranularity(nextRange),
+    )
+  }, [])
+
+  const changeChartGranularity = useCallback(
+    (nextGranularity) => {
+      if (isGranularityAllowedForRange(nextGranularity, chartRange)) {
+        setChartGranularity(nextGranularity)
+      }
+    },
+    [chartRange],
+  )
+
+  const isGranularityAllowed = useCallback(
+    (granularity) => isGranularityAllowedForRange(granularity, chartRange),
+    [chartRange],
+  )
   const [overview, setOverview] = useState(null)
   const [margins, setMargins] = useState(null)
   const [spread, setSpread] = useState(null)
@@ -101,9 +124,10 @@ export function useDashboardViewModel(apiClient) {
 
   return {
     chartRange,
-    setChartRange,
+    setChartRange: changeChartRange,
     chartGranularity,
-    setChartGranularity,
+    setChartGranularity: changeChartGranularity,
+    isGranularityAllowed,
     overview,
     margins,
     spread,
