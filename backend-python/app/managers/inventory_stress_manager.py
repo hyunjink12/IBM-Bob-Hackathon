@@ -22,7 +22,7 @@ class InventoryStressManager:
 
     Panel 4 used to only show rule-based warning cards, so calm markets looked
     like missing data. This manager always returns a snapshot (levels, deltas,
-    and a calm/watch/stressed status) so the UI has something concrete to render
+    and a calm/watch/alert status) so the UI has something concrete to render
     even when no alert rules fire.
     """
 
@@ -130,13 +130,13 @@ class InventoryStressManager:
         active_warning_count: int,
     ) -> tuple[str, str]:
         """
-        Map metrics + warning count into calm / watch / stressed.
+        Map metrics + warning count into calm / watch / alert.
 
         Casual: one word for how spicy inventory/production looks right now.
         """
         if active_warning_count > 0:
             return (
-                "stressed",
+                "alert",
                 f"{active_warning_count} active warning signal"
                 f"{'s' if active_warning_count != 1 else ''} for the latest session.",
             )
