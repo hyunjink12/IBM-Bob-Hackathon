@@ -620,7 +620,7 @@ class DuckDbRepository:
             """,
             [contract_market_code],
         )
-        return _cot_row_to_dict(row) if row else None
+        return self._cot_row_to_dict(row) if row else None
 
     def fetch_prior_cot_report(
         self,
@@ -643,7 +643,7 @@ class DuckDbRepository:
             """,
             [contract_market_code, before_report_date],
         )
-        return _cot_row_to_dict(row) if row else None
+        return self._cot_row_to_dict(row) if row else None
 
     def upsert_briefing(
         self,
