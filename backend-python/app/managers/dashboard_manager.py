@@ -5,8 +5,10 @@ from __future__ import annotations
 from datetime import date, timedelta
 from typing import Any
 
+from app.clients.cftc_cot_client import CftcCotClient
 from app.managers.crush_margin_calculator import CrushMarginCalculator
 from app.managers.inventory_stress_manager import InventoryStressManager
+from app.managers.release_schedule_manager import ReleaseScheduleManager
 from app.managers.seed_data_status_manager import SeedDataStatusManager
 from app.managers.warning_backtester import (
     RuleBacktestReport,
@@ -118,6 +120,7 @@ class DashboardManager:
         seed_status_manager: SeedDataStatusManager | None = None,
         inventory_stress_manager: InventoryStressManager | None = None,
         backtester: WarningRuleBacktester | None = None,
+        release_schedule_manager: ReleaseScheduleManager | None = None,
     ) -> None:
         self._repository = repository
         self._margin_calculator = CrushMarginCalculator(crush_config)
@@ -130,6 +133,7 @@ class DashboardManager:
         )
         self._backtester = backtester or WarningRuleBacktester(repository)
         self._backtest_cache: tuple[str | None, list[RuleBacktestReport]] | None = None
+        self._release_schedule = release_schedule_manager or ReleaseScheduleManager()
 
     def get_overview(self) -> dict:
         """Panel 1 payload with latest values, timestamps, and seed provenance."""
@@ -352,6 +356,98 @@ class DashboardManager:
             "warnings": warnings,
             "stress": stress,
         }
+
+    def get_situational_tape(self) -> dict:
+        """
+        Rolling top-of-page tape items — countdowns, active warnings, key prints.
+
+        Casual: everything a trader wants glanceable at all times.
+
+        Items are keyed by type so the frontend can style each distinctly:
+        - "release_countdown": next scheduled EIA / WASDE / COT
+        - "cot_print": latest managed-money net + WoW delta for CBOT Corn
+        - "warning": each active rule-based signal
+        - "stale": any market series older than 7 days
+        - "ingest": last successful ingestion timestamp
+        """
+        items: list[dict] = []
+
+        for release in self._release_schedule.upcoming_releases():
+            items.append({"type": "release_countdown", **release.to_dict()})
+
+        cot_item = self._build_cot_tape_item()
+        if cot_item is not None:
+            items.append(cot_item)
+
+        latest_margin = self._repository.fetch_latest_computed_margin()
+        if latest_margin is not None:
+            warnings = self._repository.fetch_warning_signals_for_date(
+                latest_margin.obs_date
+            )
+            for warning in warnings:
+                items.append(
+                    {
+                        "type": "warning",
+                        "signal_type": warning.get("signal_type"),
+                        "severity": warning.get("severity"),
+                        "message": warning.get("message"),
+                    }
+                )
+
+        for stale_item in self._build_stale_tape_items():
+            items.append(stale_item)
+
+        latest_ingest = self._repository.get_latest_ingestion_run()
+        if latest_ingest and latest_ingest.get("finished_at"):
+            items.append(
+                {
+                    "type": "ingest",
+                    "finished_at": latest_ingest["finished_at"].isoformat(),
+                    "status": latest_ingest.get("status"),
+                }
+            )
+
+        return {"items": items}
+
+    def _build_cot_tape_item(self) -> dict | None:
+        latest = self._repository.fetch_latest_cot_report(CftcCotClient.CBOT_CORN_CODE)
+        if latest is None:
+            return None
+        mm_net = latest["managed_money_long"] - latest["managed_money_short"]
+
+        prior = self._repository.fetch_prior_cot_report(
+            CftcCotClient.CBOT_CORN_CODE, latest["report_date"]
+        )
+        mm_net_wow = None
+        if prior is not None:
+            prior_net = prior["managed_money_long"] - prior["managed_money_short"]
+            mm_net_wow = mm_net - prior_net
+
+        return {
+            "type": "cot_print",
+            "contract": "CBOT Corn",
+            "report_date": latest["report_date"].isoformat(),
+            "managed_money_net": mm_net,
+            "managed_money_net_wow": mm_net_wow,
+        }
+
+    def _build_stale_tape_items(self) -> list[dict]:
+        stale: list[dict] = []
+        for key, series_id, _, _, _, display_label in self.OVERVIEW_SERIES:
+            last_updated = self._repository.get_series_last_updated(series_id)
+            if last_updated is None:
+                continue
+            age_days = (date.today() - last_updated.date()).days
+            if age_days >= 7:
+                stale.append(
+                    {
+                        "type": "stale",
+                        "key": key,
+                        "label": display_label,
+                        "age_days": age_days,
+                    }
+                )
+        return stale
 
     def get_latest_ingest_cache_key(self) -> str | None:
         """Return the ISO timestamp of the last finished ingestion run, or None."""
