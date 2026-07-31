@@ -350,8 +350,10 @@ class DashboardManager:
         }
 
     def _resolve_date_range(self, range_token: str) -> tuple[date | None, date | None]:
-        days = self._z_score_manager.parse_range_to_days(range_token)
         end_date = date.today()
+        if range_token.upper() == "YTD":
+            return date(end_date.year, 1, 1), end_date
+        days = self._z_score_manager.parse_range_to_days(range_token)
         if days is None:
             return None, end_date
         return end_date - timedelta(days=days), end_date
