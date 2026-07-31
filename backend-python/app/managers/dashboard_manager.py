@@ -253,6 +253,65 @@ class DashboardManager:
             "current": current,
         }
 
+    def get_eia_releases(self, *, range_token: str = "1Y") -> dict:
+        """
+        EIA Weekly Petroleum Status Report release events within the range.
+
+        Casual: dot on the chart for every Wednesday the EIA prints stocks/production.
+
+        Joins stocks + production raw observations by obs_date (both series are
+        weekly Wednesday releases and share dates). WoW % change is computed
+        against the immediately prior release, not a forward-filled daily value.
+        """
+        start_date, end_date = self._resolve_date_range(range_token)
+
+        # Pull one release earlier than start_date so the first in-range release
+        # has a WoW baseline. Cheap: EIA is weekly, ~7 days back is enough.
+        wow_lookback = (start_date - timedelta(days=10)) if start_date else None
+        stocks_rows = self._repository.fetch_raw_observations_by_series(
+            SERIES_ETHANOL_STOCKS, wow_lookback, end_date
+        )
+        production_rows = self._repository.fetch_raw_observations_by_series(
+            SERIES_ETHANOL_PRODUCTION, wow_lookback, end_date
+        )
+        # Also carry the stocks value with its unit_scale (kbbl → MMbbl).
+        production_by_date = {r.obs_date: r.value for r in production_rows}
+
+        releases: list[dict] = []
+        prior_stocks: float | None = None
+        prior_production: float | None = None
+        for row in stocks_rows:
+            stocks_mmbbl = row.value * 0.001  # kbbl → MMbbl, matches EiaSeriesSpec
+            production_mbpd = production_by_date.get(row.obs_date)
+
+            stocks_wow_pct = (
+                (stocks_mmbbl - prior_stocks) / prior_stocks
+                if prior_stocks not in (None, 0)
+                else None
+            )
+            production_wow_pct = (
+                (production_mbpd - prior_production) / prior_production
+                if production_mbpd is not None
+                and prior_production not in (None, 0)
+                else None
+            )
+
+            if start_date is None or row.obs_date >= start_date:
+                releases.append(
+                    {
+                        "date": row.obs_date.isoformat(),
+                        "stocks_mmbbl": round(stocks_mmbbl, 3),
+                        "stocks_wow_pct": stocks_wow_pct,
+                        "production_mbpd": production_mbpd,
+                        "production_wow_pct": production_wow_pct,
+                    }
+                )
+            prior_stocks = stocks_mmbbl
+            if production_mbpd is not None:
+                prior_production = production_mbpd
+
+        return {"range": range_token, "releases": releases}
+
     def get_warnings(self) -> dict:
         """
         Panel 4 payload with stress snapshot plus active warning cards.
