@@ -2,6 +2,7 @@ import { useDashboardViewModel } from '../viewmodels/dashboard_view_model.js'
 import { SeedDataWarningBanner } from '../components/SeedDataWarningBanner.jsx'
 import { BriefingStrip } from './BriefingStrip.jsx'
 import { MethodologyFooter } from './MethodologyFooter.jsx'
+import { TickerTape } from './TickerTape.jsx'
 import { CornEthanolSpreadPanel } from './panels/CornEthanolSpreadPanel.jsx'
 import { CrushMarginPanel } from './panels/CrushMarginPanel.jsx'
 import { MarketOverviewPanel } from './panels/MarketOverviewPanel.jsx'
@@ -25,6 +26,8 @@ export function DashboardView() {
     warnings,
     backtest,
     briefing,
+    eiaReleases,
+    tape,
     loading,
     error,
     refresh,
@@ -33,6 +36,7 @@ export function DashboardView() {
 
   return (
     <div className="dashboard">
+      <TickerTape tape={tape} />
       <SeedDataWarningBanner dataProvenance={overview?.data_provenance} />
 
       <header className="dashboard__header">
@@ -62,6 +66,7 @@ export function DashboardView() {
           chartGranularity={chartGranularity}
           onChartGranularityChange={setChartGranularity}
           isGranularityAllowed={isGranularityAllowed}
+          eiaReleases={eiaReleases?.releases}
         />
         <CornEthanolSpreadPanel spread={spread} config={config} />
         <WarningSignalsPanel warnings={warnings} backtest={backtest} />

@@ -4,6 +4,67 @@ import { TimeSeriesChart } from '../../components/TimeSeriesChart.jsx'
 /**
  * Panel 2 — crush margin centerpiece with z-score and signal label.
  */
+/** Format a decimal fraction (0.023) as a signed percent ("+2.3%"). */
+function formatPct(fraction, digits = 1) {
+  if (fraction == null || Number.isNaN(fraction)) return null
+  const pct = fraction * 100
+  const sign = pct > 0 ? '+' : ''
+  return `${sign}${pct.toFixed(digits)}%`
+}
+
+/** Format an ISO date as "Wed Jul 30, 2026" for release popup titles. */
+function formatReleaseDate(iso) {
+  if (!iso) return ''
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
+  const d = match
+    ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+    : new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return d.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
+/** Direction bucket for signed deltas (drives popup color). */
+function deltaDirection(fraction) {
+  if (fraction == null || Number.isNaN(fraction) || fraction === 0) return 'flat'
+  return fraction > 0 ? 'up' : 'down'
+}
+
+/** Shape EIA release records into the events prop the chart consumes. */
+function buildReleaseEvents(releases) {
+  if (!releases?.length) return undefined
+  return releases.map((r) => {
+    const rows = []
+    if (r.stocks_mmbbl != null) {
+      rows.push({
+        label: 'Stocks',
+        value: `${r.stocks_mmbbl.toFixed(2)} MMbbl`,
+        delta: formatPct(r.stocks_wow_pct),
+        deltaDirection: deltaDirection(r.stocks_wow_pct),
+      })
+    }
+    if (r.production_mbpd != null) {
+      rows.push({
+        label: 'Production',
+        value: `${Math.round(r.production_mbpd).toLocaleString()} Mb/d`,
+        delta: formatPct(r.production_wow_pct),
+        deltaDirection: deltaDirection(r.production_wow_pct),
+      })
+    }
+    return {
+      date: r.date,
+      tooltip: {
+        title: `EIA · ${formatReleaseDate(r.date)}`,
+        rows,
+      },
+    }
+  })
+}
+
 export function CrushMarginPanel({
   margins,
   config,
@@ -12,6 +73,7 @@ export function CrushMarginPanel({
   chartGranularity,
   onChartGranularityChange,
   isGranularityAllowed,
+  eiaReleases,
 }) {
   if (!margins) {
     return <section className="panel">Loading crush margin…</section>
@@ -99,6 +161,7 @@ export function CrushMarginPanel({
         labels={['$/bu']}
         colors={['#5b9cf5']}
         valueFormatter={(value) => `$${value?.toFixed(2)}`}
+        events={buildReleaseEvents(eiaReleases)}
       />
     </section>
   )
