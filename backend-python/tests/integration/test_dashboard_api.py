@@ -68,5 +68,5 @@ def test_dashboard_warnings_and_panel5(client: TestClient) -> None:
     stress = payload["stress"]
     assert stress["stocks_mmbbl"] is not None
     assert stress["production_mbpd"] is not None
-    assert stress["status"] in {"calm", "watch", "stressed"}
+    assert stress["status"] in {"calm", "watch", "alert"}
     assert stress["status_message"]
