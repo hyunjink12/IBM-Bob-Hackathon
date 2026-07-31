@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
+from app.clients.cftc_cot_client import CftcCotClient
 from app.clients.eia_client import EiaClient
 from app.clients.yahoo_futures_client import YahooFuturesClient
 from app.managers.crush_margin_calculator import CrushMarginCalculator
@@ -34,12 +35,14 @@ class MarketDataIngestionManager:
         eia_client: EiaClient,
         futures_client: YahooFuturesClient | None = None,
         seed_provider: SeedDataProvider | None = None,
+        cot_client: CftcCotClient | None = None,
     ) -> None:
         self._repository = repository
         self._crush_config = crush_config
         self._eia_client = eia_client
         self._futures_client = futures_client or YahooFuturesClient()
         self._seed_provider = seed_provider or SeedDataProvider()
+        self._cot_client = cot_client or CftcCotClient()
         self._merge_manager = SeriesMergeManager(repository)
         self._margin_calculator = CrushMarginCalculator(crush_config)
         self._z_score_manager = ZScoreManager()
@@ -75,6 +78,7 @@ class MarketDataIngestionManager:
 
         try:
             raw_count = self._ingest_raw_data(errors)
+            cot_count = self._ingest_cot_reports(errors)
             merged_rows = self._merge_manager.rebuild_merged_daily()
             margin_count = self._recompute_margins(
                 merged_rows,
@@ -91,6 +95,7 @@ class MarketDataIngestionManager:
             return {
                 "run_id": run_id,
                 "raw_observations": raw_count,
+                "cot_reports": cot_count,
                 "merged_days": len(merged_rows),
                 "computed_margins": margin_count,
                 "status": "ok",
@@ -211,3 +216,29 @@ class MarketDataIngestionManager:
         from app.core.dependencies import get_settings
 
         return get_settings().env != "test"
+
+    def _ingest_cot_reports(self, errors: list[str]) -> int:
+        """
+        Fetch weekly CFTC Corn COT if we don't already have the latest print.
+
+        Casual: no need to bother CFTC on every ingest — check DB first.
+
+        The Socrata endpoint is fast, but Friday-only publishing means most
+        weekday runs would re-download the same rows. We only hit the network
+        when the last stored report is older than ~5 days.
+        """
+        if not self._should_fetch_live_futures():
+            return 0
+        try:
+            latest = self._repository.fetch_latest_cot_report(
+                CftcCotClient.CBOT_CORN_CODE
+            )
+            if latest is not None:
+                age_days = (date.today() - latest["report_date"]).days
+                if age_days < 6:
+                    return 0
+            reports = self._cot_client.fetch_cbot_corn()
+            return self._repository.upsert_cot_reports(reports)
+        except Exception as exc:
+            errors.append(f"cftc_cot: {exc}")
+            return 0
