@@ -49,6 +49,14 @@ function ReleaseCountdownItem({ item }) {
       <span className="ticker-item__tag">NEXT</span>
       <span className="ticker-item__body">
         {item.source} <span className="ticker-item__mono">· {stamp} · {when}</span>
+        {item.is_approximate ? (
+          <span
+            className="ticker-item__approx"
+            title="Date approximated from historical pattern — verify against publisher calendar"
+          >
+            ≈
+          </span>
+        ) : null}
       </span>
     </span>
   )
