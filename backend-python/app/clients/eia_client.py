@@ -19,12 +19,17 @@ class EiaSeriesSpec:
 
     Each spec maps to an EIA API v2 ``/data/`` route plus facet filters
     (product, process, duoarea) rather than the legacy ``/seriesid/`` shortcut,
-    which no longer resolves for our ethanol series.
+    which no longer resolves for our ethanol series. ``unit_scale`` converts
+    the raw API value into the canonical unit expected by the merged_daily
+    column — e.g. EIA returns weekly ethanol stocks in thousand barrels but
+    the dashboard column is ``ethanol_stocks_mmbbl`` (million barrels), so
+    the stocks spec uses ``unit_scale=0.001``.
     """
 
     endpoint_path: str
     logical_id: str
     facets: dict[str, str]
+    unit_scale: float = 1.0
 
 
 class EiaClient:
@@ -40,17 +45,21 @@ class EiaClient:
 
     BASE_URL = "https://api.eia.gov/v2"
 
-    # U.S. weekly oxygenate-plant production (MBBL/D) via petroleum/pnp/wprode.
+    # U.S. weekly oxygenate-plant production, EIA-native unit: thousand barrels/day
+    # (MBBL/D). Matches our ``ethanol_production_mbpd`` column 1:1 — no scaling.
     ETHANOL_PRODUCTION = EiaSeriesSpec(
         endpoint_path="petroleum/pnp/wprode/data",
         logical_id="ethanol_production_mbpd",
         facets={"product": "EPOOXE", "process": "YOP", "duoarea": "NUS"},
+        unit_scale=1.0,
     )
-    # U.S. weekly ending stocks (MMBBL) via petroleum/stoc/wstk.
+    # U.S. weekly ending stocks. EIA returns this in THOUSAND barrels (MBBL);
+    # our column is ``ethanol_stocks_mmbbl`` (million barrels) so divide by 1000.
     ETHANOL_STOCKS = EiaSeriesSpec(
         endpoint_path="petroleum/stoc/wstk/data",
         logical_id="ethanol_stocks_mmbbl",
         facets={"product": "EPOOXE", "process": "SAE", "duoarea": "NUS"},
+        unit_scale=0.001,
     )
 
     def __init__(self, api_key: str) -> None:
@@ -108,7 +117,7 @@ class EiaClient:
                     source="eia",
                     series_id=spec.logical_id,
                     obs_date=date.fromisoformat(str(period)),
-                    value=float(value),
+                    value=float(value) * spec.unit_scale,
                     fetched_at=fetched_at,
                 )
             )
