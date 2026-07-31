@@ -65,16 +65,7 @@ function buildReleaseEvents(releases) {
   })
 }
 
-export function CrushMarginPanel({
-  margins,
-  config,
-  chartRange,
-  onChartRangeChange,
-  chartGranularity,
-  onChartGranularityChange,
-  isGranularityAllowed,
-  eiaReleases,
-}) {
+export function CrushMarginPanel({ margins, config, eiaReleases }) {
   if (!margins) {
     return <section className="panel">Loading crush margin…</section>
   }
@@ -86,45 +77,9 @@ export function CrushMarginPanel({
     <section className="panel panel--hero">
       <header className="panel__header">
         <h2>Ethanol Crush Margin</h2>
-        {onChartRangeChange ? (
-          <div className="panel__controls">
-            <label htmlFor="crush-margin-granularity">Granularity</label>
-            <select
-              id="crush-margin-granularity"
-              value={chartGranularity}
-              onChange={(event) => onChartGranularityChange(event.target.value)}
-            >
-              {config.granularities.map((option) => {
-                const allowed = isGranularityAllowed
-                  ? isGranularityAllowed(option.value)
-                  : true
-                return (
-                  <option
-                    key={option.value}
-                    value={option.value}
-                    disabled={!allowed}
-                  >
-                    {allowed ? option.label : `${option.label} (needs longer range)`}
-                  </option>
-                )
-              })}
-            </select>
-            <label htmlFor="crush-margin-range">Range</label>
-            <select
-              id="crush-margin-range"
-              value={chartRange}
-              onChange={(event) => onChartRangeChange(event.target.value)}
-            >
-              {config.chartRanges.map((range) => (
-                <option key={range} value={range}>
-                  {range}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : (
-          <span className="panel__meta">Range: {margins.range}</span>
-        )}
+        <span className="panel__meta">
+          {margins.range} · {margins.granularity}
+        </span>
       </header>
 
       {current && (
