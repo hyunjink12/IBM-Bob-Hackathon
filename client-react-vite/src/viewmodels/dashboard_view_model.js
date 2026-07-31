@@ -81,6 +81,7 @@ export function useDashboardViewModel(apiClient) {
   const [briefing, setBriefing] = useState(null)
   const [eiaReleases, setEiaReleases] = useState(null)
   const [tape, setTape] = useState(null)
+  const [cotPositioning, setCotPositioning] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -107,6 +108,7 @@ export function useDashboardViewModel(apiClient) {
         briefingData,
         eiaReleasesData,
         tapeData,
+        cotPositioningData,
       ] = await Promise.all([
         client.fetchOverview(),
         client.fetchMargins(queryParams),
@@ -116,6 +118,7 @@ export function useDashboardViewModel(apiClient) {
         client.fetchBriefing(),
         client.fetchEiaReleases({ range: chartRange }),
         client.fetchTape(),
+        client.fetchCotPositioning({ range: chartRange }),
       ])
       setOverview(overviewData)
       setMargins(marginsData)
@@ -125,6 +128,7 @@ export function useDashboardViewModel(apiClient) {
       setBriefing(briefingData)
       setEiaReleases(eiaReleasesData)
       setTape(tapeData)
+      setCotPositioning(cotPositioningData)
     } catch (fetchError) {
       setError(fetchError instanceof Error ? fetchError.message : 'Unknown error')
     } finally {
@@ -150,6 +154,7 @@ export function useDashboardViewModel(apiClient) {
     briefing,
     eiaReleases,
     tape,
+    cotPositioning,
     loading,
     error,
     refresh,
