@@ -10,6 +10,25 @@ function formatChartAxisDate(unixSeconds) {
 }
 
 /**
+ * Convert an incoming date value to Unix seconds anchored at LOCAL midnight.
+ *
+ * Backend sends date-only ISO strings ("2026-07-30"). `new Date("2026-07-30")`
+ * parses as midnight UTC, which shows as 8pm the previous day in EDT and
+ * misaligns axis ticks and tooltips by one day. Parsing the components as
+ * local time keeps daily observations on their real calendar day.
+ */
+function toUnixSecondsLocal(value) {
+  if (value instanceof Date) return Math.floor(value.getTime() / 1000)
+  const s = String(value)
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s)
+  if (dateOnly) {
+    const [, y, m, d] = dateOnly
+    return Math.floor(new Date(Number(y), Number(m) - 1, Number(d)).getTime() / 1000)
+  }
+  return Math.floor(new Date(s).getTime() / 1000)
+}
+
+/**
  * Lightweight time-series chart wrapper around uPlot.
  */
 export function TimeSeriesChart({
@@ -30,7 +49,7 @@ export function TimeSeriesChart({
       return undefined
     }
 
-    const xValues = series.map((point) => Math.floor(new Date(point[xKey]).getTime() / 1000))
+    const xValues = series.map((point) => toUnixSecondsLocal(point[xKey]))
     const data = [
       xValues,
       ...yKeys.map((key) => series.map((point) => point[key] ?? null)),
@@ -62,6 +81,9 @@ export function TimeSeriesChart({
           },
         ],
         scales: { x: { time: true } },
+        cursor: {
+          drag: { x: true, y: false, setScale: true },
+        },
       },
       data,
       containerRef.current,
