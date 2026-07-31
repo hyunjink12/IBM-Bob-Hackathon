@@ -11,6 +11,7 @@ export function CrushMarginPanel({
   onChartRangeChange,
   chartGranularity,
   onChartGranularityChange,
+  isGranularityAllowed,
 }) {
   if (!margins) {
     return <section className="panel">Loading crush margin…</section>
@@ -31,11 +32,20 @@ export function CrushMarginPanel({
               value={chartGranularity}
               onChange={(event) => onChartGranularityChange(event.target.value)}
             >
-              {config.granularities.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
+              {config.granularities.map((option) => {
+                const allowed = isGranularityAllowed
+                  ? isGranularityAllowed(option.value)
+                  : true
+                return (
+                  <option
+                    key={option.value}
+                    value={option.value}
+                    disabled={!allowed}
+                  >
+                    {allowed ? option.label : `${option.label} (needs longer range)`}
+                  </option>
+                )
+              })}
             </select>
             <label htmlFor="crush-margin-range">Range</label>
             <select
