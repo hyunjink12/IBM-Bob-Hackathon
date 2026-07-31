@@ -5,11 +5,14 @@ import { DashboardApiClient } from '../managers/dashboard_api_client.js'
 /**
  * View-model hook for the ethanol crush dashboard.
  *
- * Casual: loads all dashboard panels once (or when range changes).
+ * Chart-control state is split by scope so tabs don't share knobs:
+ *   - physicalChartRange/Granularity → drives margin chart + EIA release markers
+ *   - financialChartRange/Granularity → drives spread chart
+ *   - cotChartRange                   → drives COT positioning chart only
  *
- * Keeps fetch orchestration out of the view. The API client must be stable
- * across renders — a fresh default instance every render would recreate
- * `refresh` and retrigger the effect in a tight request loop.
+ * Range and granularity within a scope also operate independently — neither
+ * dropdown constrains the other. If the user picks Monthly + 1W, they get
+ * one bar; that's the user's intent.
  */
 export function useDashboardViewModel(apiClient) {
   const client = useMemo(
@@ -17,17 +20,22 @@ export function useDashboardViewModel(apiClient) {
     [apiClient],
   )
 
-  const [chartRange, setChartRange] = useState(dashboardConfig.defaultChartRange)
-  const [chartGranularity, setChartGranularity] = useState(
+  const [physicalChartRange, setPhysicalChartRange] = useState(
+    dashboardConfig.defaultChartRange,
+  )
+  const [physicalChartGranularity, setPhysicalChartGranularity] = useState(
     dashboardConfig.defaultGranularity,
   )
-
-  // Independent controls: neither dropdown constrains the other. The user
-  // can pick any (range, granularity) combination; if a short range paired
-  // with a long granularity yields one bar, that's the user's intent.
+  const [financialChartRange, setFinancialChartRange] = useState(
+    dashboardConfig.defaultChartRange,
+  )
+  const [financialChartGranularity, setFinancialChartGranularity] = useState(
+    dashboardConfig.defaultGranularity,
+  )
   const [cotChartRange, setCotChartRange] = useState(
     dashboardConfig.defaultChartRange,
   )
+
   const [overview, setOverview] = useState(null)
   const [margins, setMargins] = useState(null)
   const [spread, setSpread] = useState(null)
@@ -40,14 +48,14 @@ export function useDashboardViewModel(apiClient) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  const queryParams = useMemo(
+  const marginsQuery = useMemo(
     () => ({
-      range: chartRange,
+      range: physicalChartRange,
       windowType: dashboardConfig.zScore.defaultWindowType,
       lookbackDays: dashboardConfig.zScore.defaultLookbackDays,
-      granularity: chartGranularity,
+      granularity: physicalChartGranularity,
     }),
-    [chartRange, chartGranularity],
+    [physicalChartRange, physicalChartGranularity],
   )
 
   const refresh = useCallback(async () => {
@@ -66,12 +74,15 @@ export function useDashboardViewModel(apiClient) {
         cotPositioningData,
       ] = await Promise.all([
         client.fetchOverview(),
-        client.fetchMargins(queryParams),
-        client.fetchSpread({ range: chartRange, granularity: chartGranularity }),
+        client.fetchMargins(marginsQuery),
+        client.fetchSpread({
+          range: financialChartRange,
+          granularity: financialChartGranularity,
+        }),
         client.fetchWarnings(),
         client.fetchBacktest(),
         client.fetchBriefing(),
-        client.fetchEiaReleases({ range: chartRange }),
+        client.fetchEiaReleases({ range: physicalChartRange }),
         client.fetchTape(),
         client.fetchCotPositioning({ range: cotChartRange }),
       ])
@@ -89,17 +100,28 @@ export function useDashboardViewModel(apiClient) {
     } finally {
       setLoading(false)
     }
-  }, [client, chartRange, chartGranularity, cotChartRange, queryParams])
+  }, [
+    client,
+    marginsQuery,
+    physicalChartRange,
+    financialChartRange,
+    financialChartGranularity,
+    cotChartRange,
+  ])
 
   useEffect(() => {
     refresh()
   }, [refresh])
 
   return {
-    chartRange,
-    setChartRange,
-    chartGranularity,
-    setChartGranularity,
+    physicalChartRange,
+    setPhysicalChartRange,
+    physicalChartGranularity,
+    setPhysicalChartGranularity,
+    financialChartRange,
+    setFinancialChartRange,
+    financialChartGranularity,
+    setFinancialChartGranularity,
     cotChartRange,
     setCotChartRange,
     overview,
