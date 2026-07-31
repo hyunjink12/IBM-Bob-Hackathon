@@ -84,25 +84,30 @@ class DashboardManager:
     per-series staleness timestamps in one place.
     """
 
+    # (key, series_id, field_name, unit, description, display_label)
+    # Explicit display_label avoids ``.title()`` producing awkward casings like
+    # "Ddgs" / "Rbob" — commodity acronyms must render as market-standard.
     OVERVIEW_SERIES = (
-        ("corn", SERIES_CORN, "corn_usd_per_bushel", "$/bu", "CBOT corn futures"),
-        ("ethanol", SERIES_ETHANOL, "ethanol_usd_per_gallon", "$/gal", "CME EH futures (Chicago Ethanol Platts)"),
-        ("ddgs", SERIES_DDGS, "ddgs_usd_per_short_ton", "$/short ton", "DDGS coproduct"),
-        ("nat_gas", SERIES_NAT_GAS, "nat_gas_usd_per_mmbtu", "$/MMBtu", "Henry Hub proxy"),
-        ("rbob", SERIES_RBOB, "rbob_usd_per_gallon", "$/gal", "RBOB gasoline futures"),
+        ("corn", SERIES_CORN, "corn_usd_per_bushel", "$/bu", "CBOT corn futures", "Corn"),
+        ("ethanol", SERIES_ETHANOL, "ethanol_usd_per_gallon", "$/gal", "CME EH futures (Chicago Ethanol Platts)", "Ethanol"),
+        ("ddgs", SERIES_DDGS, "ddgs_usd_per_short_ton", "$/short ton", "DDGS coproduct", "DDGS"),
+        ("nat_gas", SERIES_NAT_GAS, "nat_gas_usd_per_mmbtu", "$/MMBtu", "Henry Hub proxy", "Natural Gas"),
+        ("rbob", SERIES_RBOB, "rbob_usd_per_gallon", "$/gal", "RBOB gasoline futures", "RBOB"),
         (
             "ethanol_stocks",
             SERIES_ETHANOL_STOCKS,
             "ethanol_stocks_mmbbl",
             "MMbbl",
             "EIA weekly ethanol stocks",
+            "Ethanol Stocks",
         ),
         (
             "ethanol_production",
             SERIES_ETHANOL_PRODUCTION,
             "ethanol_production_mbpd",
-            "Mbpd",
+            "Mb/d",
             "EIA weekly ethanol production",
+            "Ethanol Production",
         ),
     )
 
@@ -130,13 +135,13 @@ class DashboardManager:
         """Panel 1 payload with latest values, timestamps, and seed provenance."""
         latest = self._repository.fetch_latest_merged_daily()
         metrics = []
-        for key, series_id, field_name, unit, description in self.OVERVIEW_SERIES:
+        for key, series_id, field_name, unit, description, display_label in self.OVERVIEW_SERIES:
             value = getattr(latest, field_name, None) if latest else None
             last_updated = self._repository.get_series_last_updated(series_id)
             metrics.append(
                 {
                     "key": key,
-                    "label": key.replace("_", " ").title(),
+                    "label": display_label,
                     "value": value,
                     "unit": unit,
                     "description": description,
