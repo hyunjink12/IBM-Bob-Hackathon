@@ -129,6 +129,24 @@ class DuckDbRepository:
             cache_key VARCHAR
         )
         """,
+        """
+        CREATE TABLE IF NOT EXISTS cot_reports (
+            contract_market_code VARCHAR NOT NULL,
+            report_date DATE NOT NULL,
+            fetched_at TIMESTAMPTZ NOT NULL,
+            contract_market_name VARCHAR,
+            open_interest BIGINT,
+            producer_long BIGINT,
+            producer_short BIGINT,
+            swap_long BIGINT,
+            swap_short BIGINT,
+            managed_money_long BIGINT,
+            managed_money_short BIGINT,
+            other_reportable_long BIGINT,
+            other_reportable_short BIGINT,
+            PRIMARY KEY (contract_market_code, report_date)
+        )
+        """,
     )
 
     def __init__(self, database_path: Path) -> None:
@@ -498,6 +516,25 @@ class DuckDbRepository:
         return int(result[0]) if result else 0
 
     @staticmethod
+    def _cot_row_to_dict(row: tuple[Any, ...]) -> dict[str, Any]:
+        """Convert a cot_reports SELECT row into the dashboard-friendly dict shape."""
+        return {
+            "contract_market_code": row[0],
+            "report_date": row[1],
+            "fetched_at": row[2],
+            "contract_market_name": row[3],
+            "open_interest": row[4],
+            "producer_long": row[5],
+            "producer_short": row[6],
+            "swap_long": row[7],
+            "swap_short": row[8],
+            "managed_money_long": row[9],
+            "managed_money_short": row[10],
+            "other_reportable_long": row[11],
+            "other_reportable_short": row[12],
+        }
+
+    @staticmethod
     def _row_to_merged_daily(row: tuple[Any, ...]) -> MergedDailyRow:
         return MergedDailyRow(
             obs_date=row[0],
@@ -511,6 +548,102 @@ class DuckDbRepository:
             corn_oil_usd_per_pound=row[8],
             wasde_corn_for_ethanol_mbu=row[9],
         )
+
+    def upsert_cot_reports(self, reports: list) -> int:
+        """
+        Insert or replace weekly COT reports keyed on (contract, report_date).
+
+        `reports` is a list of app.clients.cftc_cot_client.CotReport objects,
+        typed loose here to avoid a circular import into a low-level module.
+        """
+        if not reports:
+            return 0
+        rows = [
+            (
+                r.contract_market_code,
+                r.report_date,
+                r.fetched_at,
+                r.contract_market_name,
+                r.open_interest,
+                r.producer_long,
+                r.producer_short,
+                r.swap_long,
+                r.swap_short,
+                r.managed_money_long,
+                r.managed_money_short,
+                r.other_reportable_long,
+                r.other_reportable_short,
+            )
+            for r in reports
+        ]
+        self._executemany(
+            """
+            INSERT INTO cot_reports (
+                contract_market_code, report_date, fetched_at, contract_market_name,
+                open_interest,
+                producer_long, producer_short,
+                swap_long, swap_short,
+                managed_money_long, managed_money_short,
+                other_reportable_long, other_reportable_short
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (contract_market_code, report_date) DO UPDATE SET
+                fetched_at = excluded.fetched_at,
+                contract_market_name = excluded.contract_market_name,
+                open_interest = excluded.open_interest,
+                producer_long = excluded.producer_long,
+                producer_short = excluded.producer_short,
+                swap_long = excluded.swap_long,
+                swap_short = excluded.swap_short,
+                managed_money_long = excluded.managed_money_long,
+                managed_money_short = excluded.managed_money_short,
+                other_reportable_long = excluded.other_reportable_long,
+                other_reportable_short = excluded.other_reportable_short
+            """,
+            rows,
+        )
+        return len(rows)
+
+    def fetch_latest_cot_report(self, contract_market_code: str) -> dict[str, Any] | None:
+        """Return the newest COT report for a contract, or None if absent."""
+        row = self._fetchone(
+            """
+            SELECT contract_market_code, report_date, fetched_at, contract_market_name,
+                   open_interest,
+                   producer_long, producer_short,
+                   swap_long, swap_short,
+                   managed_money_long, managed_money_short,
+                   other_reportable_long, other_reportable_short
+            FROM cot_reports
+            WHERE contract_market_code = ?
+            ORDER BY report_date DESC
+            LIMIT 1
+            """,
+            [contract_market_code],
+        )
+        return _cot_row_to_dict(row) if row else None
+
+    def fetch_prior_cot_report(
+        self,
+        contract_market_code: str,
+        before_report_date: date,
+    ) -> dict[str, Any] | None:
+        """Return the newest COT report strictly older than the given date."""
+        row = self._fetchone(
+            """
+            SELECT contract_market_code, report_date, fetched_at, contract_market_name,
+                   open_interest,
+                   producer_long, producer_short,
+                   swap_long, swap_short,
+                   managed_money_long, managed_money_short,
+                   other_reportable_long, other_reportable_short
+            FROM cot_reports
+            WHERE contract_market_code = ? AND report_date < ?
+            ORDER BY report_date DESC
+            LIMIT 1
+            """,
+            [contract_market_code, before_report_date],
+        )
+        return _cot_row_to_dict(row) if row else None
 
     def upsert_briefing(
         self,
