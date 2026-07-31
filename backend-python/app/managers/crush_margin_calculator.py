@@ -26,6 +26,26 @@ class CrushSpreadResult:
     corn_leg_usd_per_bushel: float
 
 
+@dataclass(frozen=True)
+class MarginComposition:
+    """
+    Per-component breakdown of the crush margin in $/bu of corn.
+
+    Casual: what each lever contributes to today's margin.
+
+    Positive numbers are revenue contributions; negative are cost contributions.
+    Sum of all fields equals `margin_per_bushel` in CrushMarginResult.
+    """
+
+    ethanol_revenue: float
+    ddgs_revenue: float
+    corn_oil_revenue: float
+    corn_cost: float
+    nat_gas_cost: float
+    misc_opex_cost: float
+    corn_oil_included: bool
+
+
 class CrushMarginCalculator:
     """
     Turns market inputs into crush margin per bushel and per gallon.
@@ -68,6 +88,38 @@ class CrushMarginCalculator:
         return CrushMarginResult(
             margin_per_bushel=margin_per_bushel,
             margin_per_gallon=margin_per_gallon,
+            corn_oil_included=corn_oil_included,
+        )
+
+    def decompose(self, row: MergedDailyRow) -> MarginComposition | None:
+        """
+        Break the crush margin into its six line-item drivers.
+
+        Casual: same math as `calculate()` but keeps every piece separate so
+        the UI can show what's driving the number.
+
+        Costs are returned as negative numbers so the frontend can render them
+        directly against the revenue bars without extra sign-flipping.
+        """
+        if not self._has_required_inputs(row):
+            return None
+
+        ethanol_revenue = row.ethanol_usd_per_gallon * self._config.ethanol_gallons_per_bushel
+        ddgs_revenue = self._config.ddgs_revenue_per_bushel(row.ddgs_usd_per_short_ton)
+        corn_oil_included = row.corn_oil_usd_per_pound is not None
+        corn_oil_revenue = 0.0
+        if corn_oil_included:
+            corn_oil_revenue = (
+                row.corn_oil_usd_per_pound * self._config.corn_oil_pounds_per_bushel
+            )
+
+        return MarginComposition(
+            ethanol_revenue=ethanol_revenue,
+            ddgs_revenue=ddgs_revenue,
+            corn_oil_revenue=corn_oil_revenue,
+            corn_cost=-row.corn_usd_per_bushel,
+            nat_gas_cost=-(row.nat_gas_usd_per_mmbtu * self._config.natural_gas_mmbtu_per_bushel),
+            misc_opex_cost=-self._config.misc_opex_per_bushel,
             corn_oil_included=corn_oil_included,
         )
 
