@@ -189,13 +189,52 @@ class DashboardManager:
             }
             for row in margins
         ]
+        composition = self._build_margin_composition(latest)
         return {
             "range": range_token,
             "window_type": window_type,
             "lookback_days": lookback_days,
             "granularity": granularity,
             "current": self._margin_snapshot(latest),
+            "composition": composition,
             "series": _downsample_series(series, granularity),
+        }
+
+    def _build_margin_composition(self, latest) -> dict | None:
+        """
+        Per-driver breakdown for the day matching `latest` computed margin.
+
+        Casual: 'what's making up today's margin.'
+
+        Needs the merged_daily row (prices) not the ComputedMarginRow, so we
+        look up the merge for latest.obs_date and re-run the decomposition.
+        """
+        if latest is None:
+            return None
+        merged_rows = self._repository.fetch_merged_daily(
+            latest.obs_date, latest.obs_date
+        )
+        if not merged_rows:
+            return None
+        comp = self._margin_calculator.decompose(merged_rows[0])
+        if comp is None:
+            return None
+        return {
+            "as_of": latest.obs_date.isoformat(),
+            "margin_per_bushel": latest.margin_per_bushel,
+            "components": [
+                {"label": "Ethanol revenue", "kind": "revenue", "value_per_bushel": comp.ethanol_revenue},
+                {"label": "DDGS revenue", "kind": "revenue", "value_per_bushel": comp.ddgs_revenue},
+                {
+                    "label": "Corn oil revenue",
+                    "kind": "revenue",
+                    "value_per_bushel": comp.corn_oil_revenue,
+                    "included": comp.corn_oil_included,
+                },
+                {"label": "Corn cost", "kind": "cost", "value_per_bushel": comp.corn_cost},
+                {"label": "Natural gas cost", "kind": "cost", "value_per_bushel": comp.nat_gas_cost},
+                {"label": "Misc opex", "kind": "cost", "value_per_bushel": comp.misc_opex_cost},
+            ],
         }
 
     def get_spread(
@@ -375,10 +414,34 @@ class DashboardManager:
             CftcCotClient.CBOT_CORN_CODE
         )
 
+        # Index the full history so WoW deltas can be computed even for the
+        # first in-range point (its "prior" is one week earlier — potentially
+        # outside the range but still in DB).
+        history_by_date = {r["report_date"]: r for r in full_history}
+        sorted_dates = sorted(history_by_date.keys())
+        prior_by_date: dict = {}
+        for i, d in enumerate(sorted_dates):
+            if i == 0:
+                prior_by_date[d] = None
+            else:
+                prior_by_date[d] = history_by_date[sorted_dates[i - 1]]
+
+        def _delta(current_value, prior_row, key):
+            if prior_row is None or current_value is None:
+                return None
+            prior_value = prior_row.get(key)
+            if prior_value is None:
+                return None
+            return current_value - prior_value
+
         series: list[dict] = []
         for r in reports:
             mm_net = r["managed_money_long"] - r["managed_money_short"]
             producer_net = r["producer_long"] - r["producer_short"]
+            prior = prior_by_date.get(r["report_date"])
+            prior_mm_net = None
+            if prior is not None:
+                prior_mm_net = prior["managed_money_long"] - prior["managed_money_short"]
             series.append(
                 {
                     "date": r["report_date"].isoformat(),
@@ -387,6 +450,18 @@ class DashboardManager:
                     "managed_money_net": mm_net,
                     "producer_net": producer_net,
                     "open_interest": r["open_interest"],
+                    "managed_money_long_wow": _delta(
+                        r["managed_money_long"], prior, "managed_money_long"
+                    ),
+                    "managed_money_short_wow": _delta(
+                        r["managed_money_short"], prior, "managed_money_short"
+                    ),
+                    "managed_money_net_wow": (
+                        mm_net - prior_mm_net if prior_mm_net is not None else None
+                    ),
+                    "open_interest_wow": _delta(
+                        r["open_interest"], prior, "open_interest"
+                    ),
                 }
             )
 
