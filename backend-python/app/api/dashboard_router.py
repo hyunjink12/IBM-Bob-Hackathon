@@ -55,6 +55,12 @@ def create_dashboard_router(
     def read_situational_tape() -> dict:
         return dashboard_manager.get_situational_tape()
 
+    @router.get("/cot-positioning")
+    def read_cot_positioning(
+        range: str = Query(default="1Y", alias="range"),
+    ) -> dict:
+        return dashboard_manager.get_cot_positioning(range_token=range)
+
     @router.get("/backtest")
     def read_backtest() -> dict:
         return dashboard_manager.get_backtest()
