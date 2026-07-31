@@ -79,6 +79,8 @@ export function useDashboardViewModel(apiClient) {
   const [warnings, setWarnings] = useState(null)
   const [backtest, setBacktest] = useState(null)
   const [briefing, setBriefing] = useState(null)
+  const [eiaReleases, setEiaReleases] = useState(null)
+  const [tape, setTape] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -96,21 +98,33 @@ export function useDashboardViewModel(apiClient) {
     setLoading(true)
     setError(null)
     try {
-      const [overviewData, marginsData, spreadData, warningsData, backtestData, briefingData] =
-        await Promise.all([
-          client.fetchOverview(),
-          client.fetchMargins(queryParams),
-          client.fetchSpread({ range: chartRange, granularity: chartGranularity }),
-          client.fetchWarnings(),
-          client.fetchBacktest(),
-          client.fetchBriefing(),
-        ])
+      const [
+        overviewData,
+        marginsData,
+        spreadData,
+        warningsData,
+        backtestData,
+        briefingData,
+        eiaReleasesData,
+        tapeData,
+      ] = await Promise.all([
+        client.fetchOverview(),
+        client.fetchMargins(queryParams),
+        client.fetchSpread({ range: chartRange, granularity: chartGranularity }),
+        client.fetchWarnings(),
+        client.fetchBacktest(),
+        client.fetchBriefing(),
+        client.fetchEiaReleases({ range: chartRange }),
+        client.fetchTape(),
+      ])
       setOverview(overviewData)
       setMargins(marginsData)
       setSpread(spreadData)
       setWarnings(warningsData)
       setBacktest(backtestData)
       setBriefing(briefingData)
+      setEiaReleases(eiaReleasesData)
+      setTape(tapeData)
     } catch (fetchError) {
       setError(fetchError instanceof Error ? fetchError.message : 'Unknown error')
     } finally {
@@ -134,6 +148,8 @@ export function useDashboardViewModel(apiClient) {
     warnings,
     backtest,
     briefing,
+    eiaReleases,
+    tape,
     loading,
     error,
     refresh,
