@@ -166,6 +166,36 @@
   padding: 0.75rem;
 }
 
+.metric-card--stale {
+  border-color: #4a3a1e;
+  background: #16130c;
+}
+
+.metric-card__label-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: space-between;
+  margin-bottom: 0.15rem;
+}
+
+.metric-card__label-row h3 {
+  margin: 0;
+}
+
+.metric-card__stale-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: #3b2a1d;
+  color: #f0a878;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
 .metric-card__value {
   font-size: 1.35rem;
   font-weight: 600;
