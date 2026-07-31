@@ -13,7 +13,7 @@ export function CornEthanolSpreadPanel({ spread, config }) {
   const signalClass = current ? `signal signal--${current.signal_label}` : 'signal'
 
   return (
-    <section className="panel">
+    <section className="panel panel--hero">
       <header className="panel__header">
         <MetricTooltip label="CME Ethanol Crush Spread" tooltip={config.tooltips.spread}>
           <h2>CME Ethanol Crush Spread</h2>
