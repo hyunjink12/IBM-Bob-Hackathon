@@ -19,14 +19,20 @@ import { WarningSignalsPanel } from './panels/WarningSignalsPanel.jsx'
  * Layout: always-visible header (tape / seed banner / briefing / market
  * overview) plus a Physical/Financial tab switcher for the body panels.
  *
- * Casual: physical = plant P&L view; financial = spread + spec positioning.
+ * The top ChartControls toolbar binds to the ACTIVE tab's own range/
+ * granularity state, so changing knobs on Financial never mutates Physical
+ * and vice versa. The COT chart owns its own range on top of that.
  */
 export function DashboardView() {
   const {
-    chartRange,
-    setChartRange,
-    chartGranularity,
-    setChartGranularity,
+    physicalChartRange,
+    setPhysicalChartRange,
+    physicalChartGranularity,
+    setPhysicalChartGranularity,
+    financialChartRange,
+    setFinancialChartRange,
+    financialChartGranularity,
+    setFinancialChartGranularity,
     cotChartRange,
     setCotChartRange,
     overview,
@@ -45,6 +51,21 @@ export function DashboardView() {
   } = useDashboardViewModel()
 
   const [activeTab, setActiveTab] = useState('physical')
+
+  const activeControls =
+    activeTab === 'physical'
+      ? {
+          chartRange: physicalChartRange,
+          onChartRangeChange: setPhysicalChartRange,
+          chartGranularity: physicalChartGranularity,
+          onChartGranularityChange: setPhysicalChartGranularity,
+        }
+      : {
+          chartRange: financialChartRange,
+          onChartRangeChange: setFinancialChartRange,
+          chartGranularity: financialChartGranularity,
+          onChartGranularityChange: setFinancialChartGranularity,
+        }
 
   return (
     <div className="dashboard">
@@ -74,14 +95,7 @@ export function DashboardView() {
 
       <div className="dashboard-tabs-row">
         <DashboardTabs active={activeTab} onChange={setActiveTab} />
-        <ChartControls
-          config={config}
-          scopeId="shared"
-          chartRange={chartRange}
-          onChartRangeChange={setChartRange}
-          chartGranularity={chartGranularity}
-          onChartGranularityChange={setChartGranularity}
-        />
+        <ChartControls config={config} scopeId={activeTab} {...activeControls} />
       </div>
 
       <main className="dashboard__grid">
