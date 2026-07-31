@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { useDashboardViewModel } from '../viewmodels/dashboard_view_model.js'
 import { SeedDataWarningBanner } from '../components/SeedDataWarningBanner.jsx'
 import { BriefingStrip } from './BriefingStrip.jsx'
+import { ChartControls } from './ChartControls.jsx'
 import { DashboardTabs } from './DashboardTabs.jsx'
 import { MethodologyFooter } from './MethodologyFooter.jsx'
 import { TickerTape } from './TickerTape.jsx'
 import { CornEthanolSpreadPanel } from './panels/CornEthanolSpreadPanel.jsx'
 import { CotPositioningPanel } from './panels/CotPositioningPanel.jsx'
 import { CrushMarginPanel } from './panels/CrushMarginPanel.jsx'
+import { MarginCompositionPanel } from './panels/MarginCompositionPanel.jsx'
 import { MarketOverviewPanel } from './panels/MarketOverviewPanel.jsx'
 import { WarningSignalsPanel } from './panels/WarningSignalsPanel.jsx'
 
@@ -69,7 +71,17 @@ export function DashboardView() {
         <MarketOverviewPanel overview={overview} />
       </main>
 
-      <DashboardTabs active={activeTab} onChange={setActiveTab} />
+      <div className="dashboard-tabs-row">
+        <DashboardTabs active={activeTab} onChange={setActiveTab} />
+        <ChartControls
+          config={config}
+          chartRange={chartRange}
+          onChartRangeChange={setChartRange}
+          chartGranularity={chartGranularity}
+          onChartGranularityChange={setChartGranularity}
+          isGranularityAllowed={isGranularityAllowed}
+        />
+      </div>
 
       <main className="dashboard__grid">
         {activeTab === 'physical' ? (
@@ -77,14 +89,10 @@ export function DashboardView() {
             <CrushMarginPanel
               margins={margins}
               config={config}
-              chartRange={chartRange}
-              onChartRangeChange={setChartRange}
-              chartGranularity={chartGranularity}
-              onChartGranularityChange={setChartGranularity}
-              isGranularityAllowed={isGranularityAllowed}
               eiaReleases={eiaReleases?.releases}
             />
             <WarningSignalsPanel warnings={warnings} backtest={backtest} />
+            <MarginCompositionPanel composition={margins?.composition} />
           </>
         ) : (
           <>
