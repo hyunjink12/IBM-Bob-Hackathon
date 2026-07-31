@@ -444,6 +444,34 @@ class DuckDbRepository:
             for row in rows
         ]
 
+    def fetch_raw_observations_by_series(
+        self,
+        series_id: str,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> list[RawObservation]:
+        """Raw observations for a single series within the given date range."""
+        query = "SELECT source, series_id, obs_date, value, fetched_at FROM raw_observations WHERE series_id = ?"
+        params: list[Any] = [series_id]
+        if start_date:
+            query += " AND obs_date >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND obs_date <= ?"
+            params.append(end_date)
+        query += " ORDER BY obs_date"
+        rows = self._fetchall(query, params)
+        return [
+            RawObservation(
+                source=row[0],
+                series_id=row[1],
+                obs_date=row[2],
+                value=row[3],
+                fetched_at=row[4],
+            )
+            for row in rows
+        ]
+
     def fetch_all_raw_observations(self) -> list[RawObservation]:
         """Load all raw observations ordered by series and date."""
         rows = self._fetchall(
