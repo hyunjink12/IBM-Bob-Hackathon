@@ -622,6 +622,34 @@ class DuckDbRepository:
         )
         return self._cot_row_to_dict(row) if row else None
 
+    def fetch_cot_reports(
+        self,
+        contract_market_code: str,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return all COT reports for a contract within the date range, oldest first."""
+        query = """
+            SELECT contract_market_code, report_date, fetched_at, contract_market_name,
+                   open_interest,
+                   producer_long, producer_short,
+                   swap_long, swap_short,
+                   managed_money_long, managed_money_short,
+                   other_reportable_long, other_reportable_short
+            FROM cot_reports
+            WHERE contract_market_code = ?
+        """
+        params: list[Any] = [contract_market_code]
+        if start_date:
+            query += " AND report_date >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND report_date <= ?"
+            params.append(end_date)
+        query += " ORDER BY report_date"
+        rows = self._fetchall(query, params)
+        return [self._cot_row_to_dict(row) for row in rows]
+
     def fetch_prior_cot_report(
         self,
         contract_market_code: str,
