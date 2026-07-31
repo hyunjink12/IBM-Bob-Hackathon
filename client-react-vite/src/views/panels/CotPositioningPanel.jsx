@@ -80,9 +80,82 @@ export function CotPositioningPanel({ cotPositioning }) {
         valueFormatter={(value) =>
           value == null ? '—' : `${Math.round(value / 1000).toLocaleString()}k`
         }
+        events={buildCotEvents(series)}
       />
     </section>
   )
+}
+
+/**
+ * Turn each COT weekly report into a hover-event on the chart so traders
+ * see the full disaggregated breakdown at every Friday print, not just the
+ * MM-net line value.
+ */
+function buildCotEvents(series) {
+  if (!series?.length) return undefined
+  return series.map((r) => ({
+    date: r.date,
+    tooltip: {
+      title: `CFTC · ${formatReleaseDate(r.date)}`,
+      rows: [
+        {
+          label: 'MM Long',
+          value: formatSignedThousands(r.managed_money_long),
+          delta: formatSignedThousands(r.managed_money_long_wow, { withPlus: true }),
+          deltaDirection: deltaDirection(r.managed_money_long_wow),
+        },
+        {
+          label: 'MM Short',
+          value: formatSignedThousands(r.managed_money_short),
+          delta: formatSignedThousands(r.managed_money_short_wow, { withPlus: true }),
+          // For shorts, "up" (increasing short) is bearish → red; flip.
+          deltaDirection: invertDirection(deltaDirection(r.managed_money_short_wow)),
+        },
+        {
+          label: 'MM Net',
+          value: formatSignedThousands(r.managed_money_net),
+          delta: formatSignedThousands(r.managed_money_net_wow, { withPlus: true }),
+          deltaDirection: deltaDirection(r.managed_money_net_wow),
+        },
+        {
+          label: 'Producer Net',
+          value: formatSignedThousands(r.producer_net),
+        },
+        {
+          label: 'Open Interest',
+          value: formatThousands(r.open_interest),
+          delta: formatSignedThousands(r.open_interest_wow, { withPlus: true }),
+          deltaDirection: 'flat',
+        },
+      ],
+    },
+  }))
+}
+
+function formatReleaseDate(iso) {
+  if (!iso) return ''
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
+  const d = match
+    ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+    : new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return d.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
+function deltaDirection(value) {
+  if (value == null || value === 0) return 'flat'
+  return value > 0 ? 'up' : 'down'
+}
+
+function invertDirection(d) {
+  if (d === 'up') return 'down'
+  if (d === 'down') return 'up'
+  return d
 }
 
 /* ---------- formatters ---------- */
