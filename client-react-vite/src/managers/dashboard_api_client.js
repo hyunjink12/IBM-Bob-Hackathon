@@ -48,6 +48,11 @@ export class DashboardApiClient {
     return this._get('/api/dashboard/tape')
   }
 
+  async fetchCotPositioning({ range }) {
+    const params = new URLSearchParams({ range })
+    return this._get(`/api/dashboard/cot-positioning?${params}`)
+  }
+
   async _get(path) {
     const response = await fetch(`${this.baseUrl}${path}`)
     if (!response.ok) {
