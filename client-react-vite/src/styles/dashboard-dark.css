@@ -363,14 +363,65 @@
 /* Dashboard tabs — Physical / Financial                               */
 /* ------------------------------------------------------------------ */
 
+.dashboard-tabs-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 0.5rem 0 1rem;
+}
+
 .dashboard-tabs {
   display: inline-flex;
   gap: 0.25rem;
-  margin: 0.5rem 0 1rem;
   padding: 0.25rem;
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
+}
+
+.chart-controls {
+  display: inline-flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+}
+
+.chart-controls__group {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.chart-controls__group label {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+}
+
+.chart-controls__group select {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 0.3rem 0.55rem;
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+}
+
+#chart-controls-granularity {
+  width: 6.5rem;
+}
+
+#chart-controls-range {
+  width: 5rem;
 }
 
 .dashboard-tabs__tab {
@@ -409,6 +460,79 @@
   font-size: 0.68rem;
   color: var(--text-tertiary);
   letter-spacing: 0.04em;
+}
+
+/* ------------------------------------------------------------------ */
+/* Margin Composition — driver breakdown bars                          */
+/* ------------------------------------------------------------------ */
+
+.composition {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.composition__row {
+  display: grid;
+  grid-template-columns: 8rem 1fr 5rem;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.82rem;
+}
+
+.composition__label {
+  color: var(--text-secondary);
+}
+
+.composition__bar-wrap {
+  position: relative;
+  height: 0.55rem;
+  background: var(--bg-inset);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.composition__bar {
+  height: 100%;
+  border-radius: 2px;
+}
+
+.composition__row.is-revenue .composition__bar { background: var(--pos); }
+.composition__row.is-cost    .composition__bar { background: var(--neg); }
+
+.composition__value {
+  text-align: right;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.82rem;
+}
+
+.composition__row.is-revenue .composition__value { color: var(--pos-strong); }
+.composition__row.is-cost    .composition__value { color: var(--neg-strong); }
+
+.composition__total {
+  margin-top: 0.55rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.composition__total-label {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.composition__total-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  font-size: 1.15rem;
+  font-weight: 500;
 }
 
 .signal {
