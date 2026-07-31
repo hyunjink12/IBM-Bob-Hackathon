@@ -45,6 +45,12 @@ def create_dashboard_router(
     def read_warnings() -> dict:
         return dashboard_manager.get_warnings()
 
+    @router.get("/eia-releases")
+    def read_eia_releases(
+        range: str = Query(default="1Y", alias="range"),
+    ) -> dict:
+        return dashboard_manager.get_eia_releases(range_token=range)
+
     @router.get("/backtest")
     def read_backtest() -> dict:
         return dashboard_manager.get_backtest()
