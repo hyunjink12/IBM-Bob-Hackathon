@@ -25,8 +25,14 @@ def test_z_score_labels_follow_thresholds() -> None:
 @pytest.mark.unit
 def test_parse_range_to_days() -> None:
     manager = ZScoreManager()
+    assert manager.parse_range_to_days("1W") == 7
+    assert manager.parse_range_to_days("1M") == 30
+    assert manager.parse_range_to_days("3M") == 90
+    assert manager.parse_range_to_days("6M") == 180
+    assert manager.parse_range_to_days("1Y") == 365
     assert manager.parse_range_to_days("5Y") == 1825
     assert manager.parse_range_to_days("ALL") is None
+    assert manager.parse_range_to_days("YTD") is None
 
 
 @pytest.mark.unit
