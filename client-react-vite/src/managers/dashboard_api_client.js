@@ -39,6 +39,11 @@ export class DashboardApiClient {
     return this._get('/api/dashboard/backtest')
   }
 
+  async fetchEiaReleases({ range }) {
+    const params = new URLSearchParams({ range })
+    return this._get(`/api/dashboard/eia-releases?${params}`)
+  }
+
   async _get(path) {
     const response = await fetch(`${this.baseUrl}${path}`)
     if (!response.ok) {

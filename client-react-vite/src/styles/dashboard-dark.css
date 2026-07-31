@@ -380,6 +380,60 @@
   cursor: crosshair;
 }
 
+/* Hover popup anchored to an EIA release marker. */
+.chart-event-popup {
+  z-index: 10;
+  width: max-content;
+  min-width: 200px;
+  max-width: 260px;
+  padding: 0.55rem 0.7rem;
+  background: var(--bg-inset);
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+  font-family: var(--font-sans);
+  white-space: nowrap;
+}
+
+.chart-event-popup__title {
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.35rem;
+}
+
+.chart-event-popup__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  font-size: 0.78rem;
+  padding: 0.1rem 0;
+}
+
+.chart-event-popup__label {
+  color: var(--text-secondary);
+}
+
+.chart-event-popup__value {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-event-popup__delta {
+  margin-left: 0.4rem;
+  font-size: 0.72rem;
+}
+
+.chart-event-popup__delta--up   { color: var(--pos-strong); }
+.chart-event-popup__delta--down { color: var(--neg-strong); }
+.chart-event-popup__delta--flat { color: var(--text-tertiary); }
+
 .warning-grid {
   display: grid;
   gap: 0.75rem;
