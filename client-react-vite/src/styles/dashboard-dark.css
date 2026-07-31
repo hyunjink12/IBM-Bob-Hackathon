@@ -508,6 +508,17 @@
 .ticker-item__delta--down { color: var(--neg-strong); }
 .ticker-item__delta--flat { color: var(--text-tertiary); }
 
+.ticker-item__approx {
+  margin-left: 0.35rem;
+  padding: 0 0.3rem;
+  border-radius: 3px;
+  background: var(--warn-bg);
+  color: var(--warn-strong);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  cursor: help;
+}
+
 /* Per-type tag colors. */
 .ticker-item--countdown .ticker-item__tag { background: var(--accent-bg); color: var(--accent); }
 .ticker-item--print     .ticker-item__tag { background: var(--accent-bg); color: var(--accent); }
