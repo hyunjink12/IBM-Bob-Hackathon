@@ -1,6 +1,41 @@
 /**
  * Panel 1 — latest market snapshot with per-series staleness.
  */
+
+const STALE_AFTER_DAYS = 7  // series older than this get a "stale" badge
+
+/** "2026-07-30T13:19:30.897263-04:00" → "Jul 30, 2026, 1:19 PM ET" */
+function formatTimestamp(iso) {
+  if (!iso) return null
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZoneName: 'short',
+  })
+}
+
+/** Days between the given ISO timestamp and now (rounded). */
+function daysSince(iso) {
+  if (!iso) return null
+  const then = new Date(iso).getTime()
+  if (Number.isNaN(then)) return null
+  return Math.round((Date.now() - then) / (1000 * 60 * 60 * 24))
+}
+
+/** Ethanol stocks display with 3 decimals — matches trader convention post-fix. */
+function formatValue(metric) {
+  if (metric.value == null) return '—'
+  if (metric.key === 'ethanol_stocks') return metric.value.toFixed(2)
+  if (metric.key === 'ethanol_production') return metric.value.toLocaleString('en-US', { maximumFractionDigits: 0 })
+  return metric.value.toFixed(2)
+}
+
 export function MarketOverviewPanel({ overview }) {
   if (!overview) {
     return <section className="panel">Loading market overview…</section>
@@ -13,36 +48,54 @@ export function MarketOverviewPanel({ overview }) {
         <span className="panel__meta">As of {overview.as_of}</span>
       </header>
       <div className="metric-grid">
-        {overview.metrics.map((metric) => (
-          <article key={metric.key} className="metric-card">
-            <h3>{metric.label}</h3>
-            <p className="metric-card__value">
-              {metric.value == null ? '—' : metric.value.toFixed(2)}
-              <span className="metric-card__unit">{metric.unit}</span>
-            </p>
-            <p className="metric-card__description">{metric.description}</p>
-            <p className="metric-card__updated">
-              Updated: {metric.last_updated ?? 'unknown'}
-            </p>
-          </article>
-        ))}
-        <article className="metric-card metric-card--wasde">
-          <h3>WASDE Corn for Ethanol</h3>
-          <p className="metric-card__value">
-            {overview.wasde.value_mbu == null ? '—' : overview.wasde.value_mbu.toFixed(0)}
-            <span className="metric-card__unit">M bu</span>
-          </p>
-          <p className="metric-card__description">
-            Monthly USDA demand anchor
-            {overview.wasde.delta_mbu != null
-              ? ` (${overview.wasde.delta_mbu >= 0 ? '+' : ''}${overview.wasde.delta_mbu.toFixed(0)} vs prior)`
-              : ''}
-          </p>
-          <p className="metric-card__updated">
-            Report: {overview.wasde.report_month ?? '—'}
-          </p>
-        </article>
+        {overview.metrics.map((metric) => {
+          const age = daysSince(metric.last_updated)
+          const isStale = age != null && age > STALE_AFTER_DAYS
+          return (
+            <article key={metric.key} className={`metric-card${isStale ? ' metric-card--stale' : ''}`}>
+              <div className="metric-card__label-row">
+                <h3>{metric.label}</h3>
+                {isStale && <span className="metric-card__stale-badge">{age}d stale</span>}
+              </div>
+              <p className="metric-card__value">
+                {formatValue(metric)}
+                <span className="metric-card__unit">{metric.unit}</span>
+              </p>
+              <p className="metric-card__description">{metric.description}</p>
+              <p className="metric-card__updated">
+                Updated {formatTimestamp(metric.last_updated) ?? 'unknown'}
+              </p>
+            </article>
+          )
+        })}
+        <WasdeCard wasde={overview.wasde} />
       </div>
     </section>
+  )
+}
+
+/** Separate WASDE card with billion-bushel formatting (USDA-friendly for annual figures). */
+function WasdeCard({ wasde }) {
+  const bbu = wasde.value_mbu == null ? null : wasde.value_mbu / 1000
+  const deltaBbu = wasde.delta_mbu == null ? null : wasde.delta_mbu / 1000
+  return (
+    <article className="metric-card metric-card--wasde">
+      <div className="metric-card__label-row">
+        <h3>Corn for Ethanol</h3>
+      </div>
+      <p className="metric-card__value">
+        {bbu == null ? '—' : bbu.toFixed(2)}
+        <span className="metric-card__unit">B bu</span>
+      </p>
+      <p className="metric-card__description">
+        Monthly USDA WASDE demand anchor
+        {deltaBbu != null
+          ? ` (${deltaBbu >= 0 ? '+' : ''}${deltaBbu.toFixed(2)} vs prior)`
+          : ''}
+      </p>
+      <p className="metric-card__updated">
+        Report {wasde.report_month ?? '—'}
+      </p>
+    </article>
   )
 }
