@@ -51,6 +51,10 @@ def create_dashboard_router(
     ) -> dict:
         return dashboard_manager.get_eia_releases(range_token=range)
 
+    @router.get("/tape")
+    def read_situational_tape() -> dict:
+        return dashboard_manager.get_situational_tape()
+
     @router.get("/backtest")
     def read_backtest() -> dict:
         return dashboard_manager.get_backtest()
