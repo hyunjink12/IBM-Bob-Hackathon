@@ -2,7 +2,16 @@
 
 from __future__ import annotations
 
+import logging
+
 from app.storage.duckdb_repository import ComputedMarginRow, MergedDailyRow
+
+_logger = logging.getLogger(__name__)
+
+# Any weekly move above this fraction is almost certainly a unit-mixup or
+# a stale/seed row bleeding in — cap and warn rather than render nonsense
+# like "+82,286%". Real hurricane weeks might touch 15-20%; 100% is defensive.
+_MAX_PLAUSIBLE_STOCKS_CHANGE = 1.00
 
 
 class InventoryStressManager:
@@ -76,7 +85,18 @@ class InventoryStressManager:
         prior = rows_with_stocks[-self.STOCKS_LOOKBACK_DAYS - 1].ethanol_stocks_mmbbl
         if recent is None or prior is None or prior == 0:
             return None
-        return (recent - prior) / prior
+        change = (recent - prior) / prior
+        if abs(change) > _MAX_PLAUSIBLE_STOCKS_CHANGE:
+            _logger.warning(
+                "Stocks change %.1f%% over %sd is implausible; likely a unit mismatch "
+                "in raw_observations (recent=%.3f, prior=%.3f). Suppressing.",
+                change * 100,
+                self.STOCKS_LOOKBACK_DAYS,
+                recent,
+                prior,
+            )
+            return None
+        return change
 
     def _production_vs_avg_pct(self, history: list[MergedDailyRow]) -> float | None:
         """
