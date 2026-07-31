@@ -1,0 +1,25 @@
+{
+  "_source": "USDA WASDE release calendar — https://www.usda.gov/oce/commodity/wasde",
+  "_notes": [
+    "All datetimes are Eastern Time (America/New_York), release is 12:00 PM ET.",
+    "Verify each date against the official USDA calendar before shipping to traders.",
+    "USDA typically publishes the following year's schedule in Q4; update this file annually.",
+    "If a month is missing from `dates`, ReleaseScheduleManager falls back to the second-Tuesday approximation for that month only."
+  ],
+  "release_time_et": "12:00",
+  "dates": [
+    "2026-01-12",
+    "2026-02-10",
+    "2026-03-10",
+    "2026-04-09",
+    "2026-05-12",
+    "2026-06-11",
+    "2026-07-10",
+    "2026-08-12",
+    "2026-09-11",
+    "2026-10-09",
+    "2026-11-10",
+    "2026-12-10",
+    "2027-01-12"
+  ]
+}
