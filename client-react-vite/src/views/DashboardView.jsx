@@ -18,6 +18,7 @@ export function DashboardView() {
     setChartRange,
     chartGranularity,
     setChartGranularity,
+    isGranularityAllowed,
     overview,
     margins,
     spread,
@@ -60,6 +61,7 @@ export function DashboardView() {
           onChartRangeChange={setChartRange}
           chartGranularity={chartGranularity}
           onChartGranularityChange={setChartGranularity}
+          isGranularityAllowed={isGranularityAllowed}
         />
         <CornEthanolSpreadPanel spread={spread} config={config} />
         <WarningSignalsPanel warnings={warnings} backtest={backtest} />
