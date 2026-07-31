@@ -2,7 +2,7 @@
  * Panel 1 — latest market snapshot with per-series staleness.
  */
 
-const STALE_AFTER_DAYS = 7  // series older than this get a "stale" badge
+const STALE_AFTER_DAYS = 7  // series with age_days >= this get a "stale" badge (matches backend tape)
 
 /** "2026-07-30T13:19:30.897263-04:00" → "Jul 30, 2026, 1:19 PM ET" */
 function formatTimestamp(iso) {
@@ -20,12 +20,20 @@ function formatTimestamp(iso) {
   })
 }
 
-/** Days between the given ISO timestamp and now (rounded). */
+/**
+ * Calendar-days between the given ISO timestamp and today, in the viewer's
+ * local timezone. Matches the backend tape's `(date.today() - dt.date()).days`
+ * so the "20d stale" card and "STALE 21d" tape can't disagree by 1 day for
+ * end-of-day fetch timestamps.
+ */
 function daysSince(iso) {
   if (!iso) return null
-  const then = new Date(iso).getTime()
-  if (Number.isNaN(then)) return null
-  return Math.round((Date.now() - then) / (1000 * 60 * 60 * 24))
+  const then = new Date(iso)
+  if (Number.isNaN(then.getTime())) return null
+  const thenDay = new Date(then.getFullYear(), then.getMonth(), then.getDate())
+  const today = new Date()
+  const todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  return Math.round((todayDay.getTime() - thenDay.getTime()) / (1000 * 60 * 60 * 24))
 }
 
 /** Ethanol stocks display with 3 decimals — matches trader convention post-fix. */
@@ -50,7 +58,7 @@ export function MarketOverviewPanel({ overview }) {
       <div className="metric-grid">
         {overview.metrics.map((metric) => {
           const age = daysSince(metric.last_updated)
-          const isStale = age != null && age > STALE_AFTER_DAYS
+          const isStale = age != null && age >= STALE_AFTER_DAYS
           return (
             <article key={metric.key} className={`metric-card${isStale ? ' metric-card--stale' : ''}`}>
               <div className="metric-card__label-row">
