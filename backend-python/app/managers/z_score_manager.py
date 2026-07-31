@@ -89,8 +89,21 @@ class ZScoreManager:
 
     @staticmethod
     def parse_range_to_days(range_token: str) -> int | None:
-        """Convert API range tokens like 1Y into day counts; All returns None."""
-        mapping = {"1Y": 365, "2Y": 730, "5Y": 1825}
-        if range_token.upper() == "ALL":
+        """Convert API range tokens like 1Y into day counts; ALL/YTD return None.
+
+        YTD is date-anchored (year start), not a rolling window, so callers
+        must resolve it themselves.
+        """
+        mapping = {
+            "1W": 7,
+            "1M": 30,
+            "3M": 90,
+            "6M": 180,
+            "1Y": 365,
+            "2Y": 730,
+            "5Y": 1825,
+        }
+        token = range_token.upper()
+        if token in ("ALL", "YTD"):
             return None
-        return mapping.get(range_token.upper(), 365)
+        return mapping.get(token, 365)
