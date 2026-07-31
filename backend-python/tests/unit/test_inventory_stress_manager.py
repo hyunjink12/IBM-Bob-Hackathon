@@ -75,12 +75,12 @@ def test_stocks_building_marks_watch_status() -> None:
 
 
 @pytest.mark.unit
-def test_active_warnings_mark_stressed_status() -> None:
-    """Casual: any fired warning card means stressed."""
+def test_active_warnings_mark_alert_status() -> None:
+    """Casual: any fired warning card means alert."""
     manager = InventoryStressManager()
     history = _history(40)
 
     snapshot = manager.build_snapshot(history, _margin("rich"), 2)
 
-    assert snapshot["status"] == "stressed"
+    assert snapshot["status"] == "alert"
     assert "2 active warning" in snapshot["status_message"]
