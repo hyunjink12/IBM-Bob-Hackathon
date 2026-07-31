@@ -44,6 +44,10 @@ export class DashboardApiClient {
     return this._get(`/api/dashboard/eia-releases?${params}`)
   }
 
+  async fetchTape() {
+    return this._get('/api/dashboard/tape')
+  }
+
   async _get(path) {
     const response = await fetch(`${this.baseUrl}${path}`)
     if (!response.ok) {

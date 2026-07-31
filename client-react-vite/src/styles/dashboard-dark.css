@@ -434,6 +434,93 @@
 .chart-event-popup__delta--down { color: var(--neg-strong); }
 .chart-event-popup__delta--flat { color: var(--text-tertiary); }
 
+/* ------------------------------------------------------------------ */
+/* Ticker tape — situational awareness marquee                         */
+/* ------------------------------------------------------------------ */
+
+.ticker-tape {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  margin: -1.5rem -2rem 1.25rem;
+  padding: 0.55rem 0;
+  background: var(--bg-inset);
+  border-bottom: 1px solid var(--border-strong);
+  overflow: hidden;
+  font-family: var(--font-sans);
+}
+
+.ticker-tape__track {
+  display: inline-flex;
+  gap: 2.25rem;
+  padding-left: 2rem;
+  white-space: nowrap;
+  will-change: transform;
+  animation: ticker-scroll 90s linear infinite;
+}
+
+.ticker-tape:hover .ticker-tape__track {
+  animation-play-state: paused;
+}
+
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+.ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--text-primary);
+}
+
+.ticker-item__tag {
+  padding: 0.14rem 0.5rem;
+  border-radius: 3px;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.ticker-item__body {
+  color: var(--text-primary);
+}
+
+.ticker-item__mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.ticker-item__delta {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.74rem;
+}
+
+.ticker-item__delta--up   { color: var(--pos-strong); }
+.ticker-item__delta--down { color: var(--neg-strong); }
+.ticker-item__delta--flat { color: var(--text-tertiary); }
+
+/* Per-type tag colors. */
+.ticker-item--countdown .ticker-item__tag { background: var(--accent-bg); color: var(--accent); }
+.ticker-item--print     .ticker-item__tag { background: var(--accent-bg); color: var(--accent); }
+.ticker-item--warning-high   .ticker-item__tag { background: var(--neg-bg);  color: var(--neg-strong); }
+.ticker-item--warning-medium .ticker-item__tag { background: var(--warn-bg); color: var(--warn-strong); }
+.ticker-item--warning        .ticker-item__tag { background: var(--warn-bg); color: var(--warn-strong); }
+.ticker-item--stale  .ticker-item__tag { background: var(--warn-bg); color: var(--warn-strong); }
+.ticker-item--ingest .ticker-item__tag { background: var(--bg-hover); color: var(--text-tertiary); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-tape__track { animation: none; }
+}
+
 .warning-grid {
   display: grid;
   gap: 0.75rem;
