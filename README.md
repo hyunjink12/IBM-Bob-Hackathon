@@ -82,5 +82,16 @@ cd backend-python
 | File | Purpose |
 |------|---------|
 | `config/crush_model.json` | CARD yields and misc opex |
+| `config/wasde_schedule.json` | USDA-published WASDE release dates (see caveat below) |
 | `client-react-vite/src/config/dashboard_config.js` | Z-score window, chart range, tooltips |
 | `backend-python/.env` | Secrets only (EIA key, admin token) |
+
+## Data caveats
+
+Release schedules the tape and countdown surface:
+
+- **EIA WPSR** — hardcoded rule: Wednesday 10:30 AM ET. Does not model the Thursday shift that happens ~5×/year when Monday is a federal holiday.
+- **CFTC COT** — hardcoded rule: Friday 3:30 PM ET. Same holiday-shift caveat.
+- **USDA WASDE** — loaded from `config/wasde_schedule.json`, which ships prefilled with the 2026 published dates. When the file has no entry for the target month (e.g. you're asking about a date past the last row), the manager falls back to a "second Tuesday of the month at 12:00 ET" approximation and flags the resulting release with `is_approximate=true`. The tape renders an amber `≈` badge next to any approximate countdown so it's visible at a glance. **Verify the shipped dates against the official USDA calendar at https://www.usda.gov/oce/commodity/wasde before showing this to anyone whose job depends on it**, and update the JSON file annually after USDA publishes the next year's schedule.
+
+Both hardcoded release rules (EIA, COT) and the WASDE approximation are honest fallbacks — not something to rely on when a real trading decision depends on the exact minute.
