@@ -2,6 +2,10 @@
 
 Decision-support dashboard for corn ethanol crush margins, z-scores, and warning signals.
 
+## How IBM Bob was used
+
+IBM Bob (IBM's AI coding agent) built this dashboard throughout the hackathon; the IBM AI in the live product is **IBM Granite on watsonx.ai**. All numbers — crush margin, z-score, signal label, warning rules, inventory stress — are computed in Python. Granite takes that snapshot and writes a short trader briefing: what the margin signal means right now, which warnings are active, how those rules have performed historically, and one thing to watch. It shows up as the **Signal Briefing** strip at the top of the dashboard (optional — set `APP_WATSONX_API_KEY` and `APP_WATSONX_PROJECT_ID` in `.env`; without them the rest of the app is unchanged).
+
 ## Run locally
 
 You need two processes: the FastAPI backend (port 8000) and the Vite dev server (port 5173). Start the backend first — Vite proxies `/api` to `localhost:8000`, so the frontend needs it up before it can render live data.
@@ -17,6 +21,8 @@ cp .env.example .env            # Windows: copy .env.example .env
 ```
 
 Open `backend-python/.env` and paste in an EIA API key. Free registration at https://www.eia.gov/opendata/register.php — the key is emailed instantly. Without it, ethanol production + stocks fall back to synthetic seed data and the orange "SYNTHETIC SEED DATA" banner stays up. Everything else (corn, ethanol price, DDGS, nat gas, RBOB) comes from Yahoo Finance and works without any key.
+
+For the Granite **Signal Briefing** strip, also set `APP_WATSONX_API_KEY` and `APP_WATSONX_PROJECT_ID` (IBM Cloud IAM key + watsonx.ai project ID). Without them the dashboard still works; the briefing strip simply does not appear.
 
 Then boot the server:
 
@@ -75,7 +81,7 @@ cd backend-python
 
 - **Frontend**: Vercel — set `VITE_API_BASE_URL` to the backend URL.
 - **Backend**: Railway / Render / Fly.io with persistent volume for `backend-python/data/`.
-- Copy `backend-python/.env.example` → `.env` and set `APP_EIA_API_KEY`, `APP_ADMIN_TOKEN`.
+- Copy `backend-python/.env.example` → `.env` and set `APP_EIA_API_KEY`, `APP_ADMIN_TOKEN`, and (for the briefing strip) `APP_WATSONX_API_KEY`, `APP_WATSONX_PROJECT_ID`.
 
 ## Config
 
@@ -84,7 +90,7 @@ cd backend-python
 | `config/crush_model.json` | CARD yields and misc opex |
 | `config/wasde_schedule.json` | USDA-published WASDE release dates (see caveat below) |
 | `client-react-vite/src/config/dashboard_config.js` | Z-score window, chart range, tooltips |
-| `backend-python/.env` | Secrets only (EIA key, admin token) |
+| `backend-python/.env` | Secrets only (EIA key, admin token, watsonx credentials) |
 
 ## Data caveats
 
