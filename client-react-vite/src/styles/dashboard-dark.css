@@ -416,12 +416,21 @@
   font-size: 0.8rem;
 }
 
-#chart-controls-granularity {
+.chart-controls__select--granularity {
   width: 6.5rem;
 }
 
-#chart-controls-range {
+.chart-controls__select--range {
   width: 5rem;
+}
+
+/* Header layout: right side stacks meta text over an embedded ChartControls. */
+.panel__header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .dashboard-tabs__tab {

@@ -1,51 +1,52 @@
 /**
- * Persistent range + granularity dropdowns for the tabbed chart body.
+ * Range + granularity dropdowns for one chart scope.
  *
- * State lives in the view-model, so switching tabs preserves both selections
- * and every chart on either tab reacts to a change from one place.
+ * Both dropdowns operate independently — picking a short range doesn't
+ * mutate granularity, and picking a coarse granularity doesn't mutate
+ * range. If a combination yields one bar, that's the user's intent.
+ *
+ * `scopeId` namespaces the <select> ids so multiple ChartControls can
+ * coexist on the page (e.g. shared top toolbar + a COT-specific one).
  */
 export function ChartControls({
   config,
+  scopeId = 'shared',
   chartRange,
   onChartRangeChange,
   chartGranularity,
   onChartGranularityChange,
-  isGranularityAllowed,
+  chartRanges,
 }) {
+  const showGranularity = Boolean(onChartGranularityChange)
+  const rangesToShow = chartRanges ?? config.chartRanges
   return (
     <div className="chart-controls">
-      <div className="chart-controls__group">
-        <label htmlFor="chart-controls-granularity">Granularity</label>
-        <select
-          id="chart-controls-granularity"
-          value={chartGranularity}
-          onChange={(event) => onChartGranularityChange(event.target.value)}
-        >
-          {config.granularities.map((option) => {
-            const allowed = isGranularityAllowed
-              ? isGranularityAllowed(option.value)
-              : true
-            return (
-              <option
-                key={option.value}
-                value={option.value}
-                disabled={!allowed}
-                title={allowed ? undefined : 'Needs a longer range to plot enough bars'}
-              >
-                {allowed ? option.label : `${option.label} —`}
+      {showGranularity ? (
+        <div className="chart-controls__group">
+          <label htmlFor={`chart-controls-granularity-${scopeId}`}>Granularity</label>
+          <select
+            id={`chart-controls-granularity-${scopeId}`}
+            className="chart-controls__select chart-controls__select--granularity"
+            value={chartGranularity}
+            onChange={(event) => onChartGranularityChange(event.target.value)}
+          >
+            {config.granularities.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
-            )
-          })}
-        </select>
-      </div>
+            ))}
+          </select>
+        </div>
+      ) : null}
       <div className="chart-controls__group">
-        <label htmlFor="chart-controls-range">Range</label>
+        <label htmlFor={`chart-controls-range-${scopeId}`}>Range</label>
         <select
-          id="chart-controls-range"
+          id={`chart-controls-range-${scopeId}`}
+          className="chart-controls__select chart-controls__select--range"
           value={chartRange}
           onChange={(event) => onChartRangeChange(event.target.value)}
         >
-          {config.chartRanges.map((range) => (
+          {rangesToShow.map((range) => (
             <option key={range} value={range}>
               {range}
             </option>

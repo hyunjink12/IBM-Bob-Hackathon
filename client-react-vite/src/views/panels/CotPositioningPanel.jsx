@@ -1,4 +1,10 @@
 import { TimeSeriesChart } from '../../components/TimeSeriesChart.jsx'
+import { ChartControls } from '../ChartControls.jsx'
+
+// COT is a weekly series. 1W → 1 point, 1M → ~4 points; both are useless for
+// positioning context, so they're excluded from this panel's range dropdown.
+// Everything else stays available (3M gives ~13 points, plenty).
+const COT_ALLOWED_RANGES = ['3M', '6M', 'YTD', '1Y', '2Y', '5Y', 'ALL']
 
 /**
  * Panel — CBOT Corn managed-money positioning.
@@ -8,7 +14,12 @@ import { TimeSeriesChart } from '../../components/TimeSeriesChart.jsx'
  * MM net (long − short) is the directional signal. 5Y empirical percentile
  * says whether the current print is historically stretched or benign.
  */
-export function CotPositioningPanel({ cotPositioning }) {
+export function CotPositioningPanel({
+  cotPositioning,
+  config,
+  chartRange,
+  onChartRangeChange,
+}) {
   if (!cotPositioning) {
     return <section className="panel">Loading COT positioning…</section>
   }
@@ -38,9 +49,20 @@ export function CotPositioningPanel({ cotPositioning }) {
     <section className="panel panel--hero">
       <header className="panel__header">
         <h2>CBOT Corn — Managed Money Positioning</h2>
-        <span className="panel__meta">
-          As of {current.report_date} · CFTC Disaggregated futures-only
-        </span>
+        <div className="panel__header-right">
+          <span className="panel__meta">
+            As of {current.report_date} · CFTC Disaggregated futures-only
+          </span>
+          {config && onChartRangeChange ? (
+            <ChartControls
+              config={config}
+              scopeId="cot"
+              chartRange={chartRange}
+              onChartRangeChange={onChartRangeChange}
+              chartRanges={COT_ALLOWED_RANGES}
+            />
+          ) : null}
+        </div>
       </header>
 
       <div className="hero-metrics">

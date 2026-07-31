@@ -27,7 +27,8 @@ export function DashboardView() {
     setChartRange,
     chartGranularity,
     setChartGranularity,
-    isGranularityAllowed,
+    cotChartRange,
+    setCotChartRange,
     overview,
     margins,
     spread,
@@ -75,11 +76,11 @@ export function DashboardView() {
         <DashboardTabs active={activeTab} onChange={setActiveTab} />
         <ChartControls
           config={config}
+          scopeId="shared"
           chartRange={chartRange}
           onChartRangeChange={setChartRange}
           chartGranularity={chartGranularity}
           onChartGranularityChange={setChartGranularity}
-          isGranularityAllowed={isGranularityAllowed}
         />
       </div>
 
@@ -97,7 +98,12 @@ export function DashboardView() {
         ) : (
           <>
             <CornEthanolSpreadPanel spread={spread} config={config} />
-            <CotPositioningPanel cotPositioning={cotPositioning} />
+            <CotPositioningPanel
+              cotPositioning={cotPositioning}
+              config={config}
+              chartRange={cotChartRange}
+              onChartRangeChange={setCotChartRange}
+            />
           </>
         )}
       </main>
