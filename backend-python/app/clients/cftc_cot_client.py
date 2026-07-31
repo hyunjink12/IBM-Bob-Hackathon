@@ -113,20 +113,24 @@ class CftcCotClient:
             if not report_date_str:
                 return None
             report_date = _parse_iso_date(report_date_str)
+            # Field-name inconsistency in the CFTC Socrata dataset:
+            #   producer / other_reportable → no `_all` suffix
+            #   swap / managed_money       → `_all` suffix
+            # (swap short/spread additionally have a stray double underscore.)
             return CotReport(
                 contract_market_code=row.get("cftc_contract_market_code", ""),
                 contract_market_name=row.get("contract_market_name", ""),
                 report_date=report_date,
                 fetched_at=fetched_at,
                 open_interest=_int(row.get("open_interest_all")),
-                producer_long=_int(row.get("prod_merc_positions_long_all")),
-                producer_short=_int(row.get("prod_merc_positions_short_all")),
+                producer_long=_int(row.get("prod_merc_positions_long")),
+                producer_short=_int(row.get("prod_merc_positions_short")),
                 swap_long=_int(row.get("swap_positions_long_all")),
                 swap_short=_int(row.get("swap__positions_short_all")),
                 managed_money_long=_int(row.get("m_money_positions_long_all")),
                 managed_money_short=_int(row.get("m_money_positions_short_all")),
-                other_reportable_long=_int(row.get("other_rept_positions_long_all")),
-                other_reportable_short=_int(row.get("other_rept_positions_short_all")),
+                other_reportable_long=_int(row.get("other_rept_positions_long")),
+                other_reportable_short=_int(row.get("other_rept_positions_short")),
             )
         except (ValueError, TypeError):
             return None
