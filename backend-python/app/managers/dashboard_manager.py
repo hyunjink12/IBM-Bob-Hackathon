@@ -357,6 +357,80 @@ class DashboardManager:
             "stress": stress,
         }
 
+    def get_cot_positioning(self, *, range_token: str = "1Y") -> dict:
+        """
+        CBOT Corn COT positioning payload: history series + latest print + percentile.
+
+        Casual: 'where are the specs sitting, and how stretched is that?'
+
+        Managed-money net (long − short) is the spec directional signal traders
+        watch. Percentile is computed over the full 5Y file so 'stretched'
+        readings survive a shorter chart-range selection.
+        """
+        start_date, end_date = self._resolve_date_range(range_token)
+        reports = self._repository.fetch_cot_reports(
+            CftcCotClient.CBOT_CORN_CODE, start_date, end_date
+        )
+        full_history = self._repository.fetch_cot_reports(
+            CftcCotClient.CBOT_CORN_CODE
+        )
+
+        series: list[dict] = []
+        for r in reports:
+            mm_net = r["managed_money_long"] - r["managed_money_short"]
+            producer_net = r["producer_long"] - r["producer_short"]
+            series.append(
+                {
+                    "date": r["report_date"].isoformat(),
+                    "managed_money_long": r["managed_money_long"],
+                    "managed_money_short": r["managed_money_short"],
+                    "managed_money_net": mm_net,
+                    "producer_net": producer_net,
+                    "open_interest": r["open_interest"],
+                }
+            )
+
+        latest = full_history[-1] if full_history else None
+        prior = full_history[-2] if len(full_history) >= 2 else None
+        latest_snapshot = None
+        if latest is not None:
+            mm_net = latest["managed_money_long"] - latest["managed_money_short"]
+            mm_net_wow = None
+            if prior is not None:
+                prior_net = prior["managed_money_long"] - prior["managed_money_short"]
+                mm_net_wow = mm_net - prior_net
+            percentile = self._compute_mm_net_percentile(full_history, mm_net)
+            latest_snapshot = {
+                "report_date": latest["report_date"].isoformat(),
+                "managed_money_long": latest["managed_money_long"],
+                "managed_money_short": latest["managed_money_short"],
+                "managed_money_net": mm_net,
+                "managed_money_net_wow": mm_net_wow,
+                "producer_net": latest["producer_long"] - latest["producer_short"],
+                "open_interest": latest["open_interest"],
+                "mm_net_percentile_5y": percentile,
+            }
+
+        return {
+            "range": range_token,
+            "current": latest_snapshot,
+            "series": series,
+        }
+
+    @staticmethod
+    def _compute_mm_net_percentile(
+        history: list[dict], latest_mm_net: int
+    ) -> float | None:
+        """Rank the latest MM net within the full 5Y COT history."""
+        if not history:
+            return None
+        nets = sorted(
+            r["managed_money_long"] - r["managed_money_short"] for r in history
+        )
+        # Rank position of the latest value (empirical CDF).
+        below_or_equal = sum(1 for n in nets if n <= latest_mm_net)
+        return round(below_or_equal / len(nets), 3)
+
     def get_situational_tape(self) -> dict:
         """
         Rolling top-of-page tape items — countdowns, active warnings, key prints.
