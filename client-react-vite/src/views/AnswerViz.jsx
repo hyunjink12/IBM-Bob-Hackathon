@@ -310,11 +310,9 @@ function MarginDriverBars({ data }) {
           const barX = pos ? ZERO_X : ZERO_X - barW
           const sign = pos ? '+' : ''
 
-          // Value label: pos → right of bar end, neg → left of bar end, clamped inside VW
-          const valX  = pos
-            ? Math.min(ZERO_X + barW + 3, VW - 2)
-            : Math.max(ZERO_X - barW - 3, LABEL_W + 2)
-          const anchor = pos ? 'start' : 'end'
+          // Value label always sits just right of ZERO_X so it never
+          // collides with the row-label column on the left side.
+          const valX = ZERO_X + 5
 
           return (
             <g key={label}>
@@ -330,7 +328,7 @@ function MarginDriverBars({ data }) {
                 }}
               />
               <text
-                x={valX} y={y + 12} fontSize="9" fill="#9aa5b1" textAnchor={anchor}
+                x={valX} y={y + 12} fontSize="9" fill="#9aa5b1" textAnchor="start"
                 className="answer-viz--fadein"
                 style={{ animationDelay: `${0.35 + i * 0.07}s` }}
               >
