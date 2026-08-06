@@ -249,6 +249,7 @@ class BriefingManager:
             "question_id": question_id,
             "question_label": self.PRESET_QUESTIONS[question_id],
             "answer": answer,
+            "chart_data": context,   # raw numbers so the frontend can render sparklines
         }
 
     def _eia_question_context(self) -> dict:

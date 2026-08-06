@@ -1142,6 +1142,126 @@
   color: var(--signal-weak);
 }
 
+/* Two-column answer body: prose left, viz right — vertically centred */
+.briefing-strip__answer-body {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 1.25rem;
+  align-items: center;
+}
+
+@media (max-width: 860px) {
+  .briefing-strip__answer-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.briefing-strip__answer-prose {
+  min-width: 0;
+}
+
+.briefing-strip__answer-viz {
+  min-width: 0;
+  padding-left: 1rem;
+  border-left: 1px solid var(--border-subtle);
+}
+
+@media (max-width: 860px) {
+  .briefing-strip__answer-viz {
+    border-left: none;
+    padding-left: 0;
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 0.65rem;
+  }
+}
+
+/* AnswerViz shared styles */
+.answer-viz {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.answer-viz__svg {
+  display: block;
+  /* Never clip — geometry is now contained within the viewBox */
+  overflow: hidden;
+  width: 100%;
+}
+
+/* ── Animation classes ────────────────────────────────────────────── */
+
+/* Lines draw in via stroke-dashoffset */
+.viz-line-anim {
+  animation: viz-line-draw 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+@keyframes viz-line-draw {
+  from { stroke-dashoffset: attr(stroke-dasharray); opacity: 0.2; }
+  to   { stroke-dashoffset: 0; opacity: 1; }
+}
+
+/* Bars scale in from their origin (set via style.transformOrigin) */
+.viz-bar-anim {
+  transform: scaleX(0);
+  animation: viz-bar-grow 0.45s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+@keyframes viz-bar-grow {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+/* Dots and text fade in */
+.viz-dot-anim,
+.answer-viz--fadein {
+  opacity: 0;
+  animation: viz-fadein 0.3s ease forwards;
+}
+@keyframes viz-fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.answer-viz__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.answer-viz__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.answer-viz__date-range {
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+}
+
+.answer-viz__bar-row,
+.answer-viz__gauge-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.answer-viz__bar-label {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  width: 3.5rem;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.answer-viz__gauge-label {
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+
 /* Loading skeleton — three pulsing bars */
 .briefing-skeleton {
   display: flex;
