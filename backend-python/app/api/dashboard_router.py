@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, status
 
 from app.managers.briefing_manager import BriefingManager
 from app.managers.dashboard_manager import DashboardManager
@@ -76,6 +76,18 @@ def create_dashboard_router(
         """
         cache_key = dashboard_manager.get_latest_ingest_cache_key()
         return briefing_manager.get_or_generate(ingest_cache_key=cache_key)
+
+    @router.post("/ask")
+    def answer_preset_question(
+        question_id: str = Body(..., embed=True),
+    ) -> dict:
+        """
+        Answer one of the preset Granite questions scoped to dashboard data.
+
+        Accepts ``{"question_id": "eia_interpretation" | "cot_interpretation" | "margin_drivers"}``.
+        Always freshly generated — no cache — so the user sees up-to-date prose.
+        """
+        return briefing_manager.answer_preset_question(question_id)
 
     return router
 

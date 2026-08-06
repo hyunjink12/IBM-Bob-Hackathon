@@ -31,6 +31,19 @@ export class DashboardApiClient {
     return this._get('/api/dashboard/briefing')
   }
 
+  async askPresetQuestion(questionId) {
+    const response = await fetch(`${this.baseUrl}/api/dashboard/ask`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question_id: questionId }),
+    })
+    if (!response.ok) {
+      const text = await response.text()
+      throw new Error(text || `Request failed: ${response.status}`)
+    }
+    return response.json()
+  }
+
   async fetchWarnings() {
     return this._get('/api/dashboard/warnings')
   }

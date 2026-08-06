@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useDashboardViewModel } from '../viewmodels/dashboard_view_model.js'
+import { DashboardApiClient } from '../managers/dashboard_api_client.js'
 import { SeedDataWarningBanner } from '../components/SeedDataWarningBanner.jsx'
 import { BriefingStrip } from './BriefingStrip.jsx'
 import { ChartControls } from './ChartControls.jsx'
@@ -51,6 +52,8 @@ export function DashboardView() {
   } = useDashboardViewModel()
 
   const [activeTab, setActiveTab] = useState('physical')
+  // Stable client instance for the preset-question chips inside BriefingStrip.
+  const apiClient = useMemo(() => new DashboardApiClient(), [])
 
   const activeControls =
     activeTab === 'physical'
@@ -84,7 +87,7 @@ export function DashboardView() {
         </div>
       </header>
 
-      <BriefingStrip briefing={briefing} />
+      <BriefingStrip briefing={briefing} apiClient={apiClient} />
 
       {loading && <p className="dashboard__status">Loading dashboard…</p>}
       {error && <p className="dashboard__error">{error}</p>}
