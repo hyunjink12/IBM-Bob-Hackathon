@@ -1142,6 +1142,92 @@
   color: var(--signal-weak);
 }
 
+/* Two-column answer body: prose left, viz right */
+.briefing-strip__answer-body {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .briefing-strip__answer-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.briefing-strip__answer-prose {
+  min-width: 0;
+}
+
+.briefing-strip__answer-viz {
+  min-width: 0;
+  padding-left: 1rem;
+  border-left: 1px solid var(--border-subtle);
+}
+
+@media (max-width: 860px) {
+  .briefing-strip__answer-viz {
+    border-left: none;
+    padding-left: 0;
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 0.65rem;
+  }
+}
+
+/* AnswerViz shared styles */
+.answer-viz {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.answer-viz__svg {
+  display: block;
+  overflow: visible;
+}
+
+.answer-viz__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.answer-viz__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.answer-viz__date-range {
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+  color: var(--text-tertiary);
+}
+
+.answer-viz__bar-row,
+.answer-viz__gauge-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.answer-viz__bar-label {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  width: 3.5rem;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.answer-viz__gauge-label {
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+
 /* Loading skeleton — three pulsing bars */
 .briefing-skeleton {
   display: flex;

@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
+import { AnswerViz } from './AnswerViz.jsx'
 
 /**
  * BriefingStrip — IBM Granite daily signal briefing + preset question chips.
@@ -18,6 +19,7 @@ export function BriefingStrip({ briefing, apiClient }) {
   const [activeQuestion, setActiveQuestion] = useState(null) // question_id | null
   const [answerState, setAnswerState] = useState('idle')     // 'idle' | 'loading' | 'done' | 'error'
   const [answerText, setAnswerText] = useState(null)
+  const [answerResult, setAnswerResult] = useState(null)     // full API response incl. chart_data
   const abortRef = useRef(null)
 
   // Derive a stable client reference from the prop (parent passes DashboardApiClient).
@@ -26,14 +28,13 @@ export function BriefingStrip({ briefing, apiClient }) {
   async function handleChipClick(questionId) {
     // Clicking the active chip a second time dismisses the answer.
     if (activeQuestion === questionId && answerState !== 'loading') {
-      setActiveQuestion(null)
-      setAnswerText(null)
-      setAnswerState('idle')
+      dismiss()
       return
     }
 
     setActiveQuestion(questionId)
     setAnswerText(null)
+    setAnswerResult(null)
     setAnswerState('loading')
 
     try {
@@ -41,15 +42,26 @@ export function BriefingStrip({ briefing, apiClient }) {
       const result = await client.askPresetQuestion(questionId)
       if (result.answer) {
         setAnswerText(result.answer)
+        setAnswerResult(result)
         setAnswerState('done')
       } else {
         setAnswerText(result.unavailable_reason ?? 'No answer returned.')
+        setAnswerResult(null)
         setAnswerState('error')
       }
     } catch (err) {
       setAnswerText(err.message ?? 'Request failed.')
+      setAnswerResult(null)
       setAnswerState('error')
     }
+  }
+
+  // Dismiss state also clears the result
+  function dismiss() {
+    setActiveQuestion(null)
+    setAnswerText(null)
+    setAnswerResult(null)
+    setAnswerState('idle')
   }
 
   // Render nothing when the main briefing is unavailable (watsonx not configured).
@@ -111,13 +123,13 @@ export function BriefingStrip({ briefing, apiClient }) {
           </div>
         </div>
 
-        {/* ── Answer panel — renders below both columns ──────────── */}
+        {/* ── Answer panel — prose left, viz right ───────────────── */}
         {activeQuestion && answerState !== 'idle' && (
           <div
             className={[
               'briefing-strip__answer',
               answerState === 'loading' ? 'briefing-strip__answer--loading' : '',
-              answerState === 'error' ? 'briefing-strip__answer--error' : '',
+              answerState === 'error'   ? 'briefing-strip__answer--error'   : '',
             ]
               .filter(Boolean)
               .join(' ')}
@@ -125,12 +137,22 @@ export function BriefingStrip({ briefing, apiClient }) {
             {answerState === 'loading' ? (
               <AnswerSkeleton />
             ) : (
-              <>
-                <p className="briefing-strip__answer-label">
-                  {PRESET_QUESTIONS.find((q) => q.id === activeQuestion)?.label}
-                </p>
-                <p className="briefing-strip__answer-text">{answerText}</p>
-              </>
+              <div className="briefing-strip__answer-body">
+                <div className="briefing-strip__answer-prose">
+                  <p className="briefing-strip__answer-label">
+                    {PRESET_QUESTIONS.find((q) => q.id === activeQuestion)?.label}
+                  </p>
+                  <p className="briefing-strip__answer-text">{answerText}</p>
+                </div>
+                {answerResult?.chart_data && (
+                  <div className="briefing-strip__answer-viz">
+                    <AnswerViz
+                      questionId={activeQuestion}
+                      chartData={answerResult.chart_data}
+                    />
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}
