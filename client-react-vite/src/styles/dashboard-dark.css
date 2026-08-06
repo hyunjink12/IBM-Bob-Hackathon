@@ -998,12 +998,29 @@
   font-size: 0.68rem;
 }
 
+/* Two-column body: prose left, chips right */
+.briefing-strip__body {
+  display: grid;
+  grid-template-columns: 1fr 14rem;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 780px) {
+  .briefing-strip__body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.briefing-strip__prose-col {
+  min-width: 0;
+}
+
 .briefing-strip__text {
   margin: 0;
   color: var(--text-primary);
   font-size: 0.92rem;
   line-height: 1.65;
-  max-width: 90ch;
 }
 
 .briefing-strip__meta {
@@ -1011,4 +1028,139 @@
   color: var(--text-tertiary);
   font-size: 0.72rem;
   font-family: var(--font-mono);
+}
+
+/* Right column: ask label + chip stack */
+.briefing-strip__ask-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-left: 1rem;
+  border-left: 1px solid var(--border-subtle);
+}
+
+@media (max-width: 780px) {
+  .briefing-strip__ask-col {
+    border-left: none;
+    border-top: 1px solid var(--border-subtle);
+    padding-left: 0;
+    padding-top: 0.75rem;
+  }
+}
+
+.briefing-strip__ask-label {
+  margin: 0 0 0.1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+
+.briefing-strip__chips {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+/* Individual question chip */
+.briefing-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.38rem 0.7rem;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 100ms ease, border-color 100ms ease, color 100ms ease;
+  white-space: nowrap;
+}
+
+.briefing-chip:hover:not(:disabled) {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.briefing-chip--active {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.briefing-chip:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Spinner inside a loading chip — pure CSS ring */
+.briefing-chip__spinner {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 2px solid transparent;
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: briefing-spin 0.65s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes briefing-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Answer panel — appears below both columns */
+.briefing-strip__answer {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.briefing-strip__answer-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.briefing-strip__answer-text {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  max-width: 100ch;
+}
+
+.briefing-strip__answer--error .briefing-strip__answer-text {
+  color: var(--signal-weak);
+}
+
+/* Loading skeleton — three pulsing bars */
+.briefing-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.briefing-skeleton__line {
+  height: 0.85rem;
+  border-radius: 3px;
+  background: var(--bg-hover);
+  animation: briefing-pulse 1.4s ease-in-out infinite;
+}
+
+.briefing-skeleton__line--wide  { width: 88%; }
+.briefing-skeleton__line--mid   { width: 68%; }
+.briefing-skeleton__line--narrow { width: 44%; }
+
+@keyframes briefing-pulse {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 1; }
 }
