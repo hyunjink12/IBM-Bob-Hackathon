@@ -1114,11 +1114,16 @@
   to { transform: rotate(360deg); }
 }
 
-/* Answer panel — appears below both columns */
+/* Answer panel — slides down + fades in when it appears */
 .briefing-strip__answer {
   margin-top: 0.85rem;
   padding-top: 0.85rem;
   border-top: 1px solid var(--border-subtle);
+  animation: answer-panel-enter 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+@keyframes answer-panel-enter {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .briefing-strip__answer-label {
@@ -1128,6 +1133,7 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--accent);
+  animation: viz-fadein 0.3s ease both;
 }
 
 .briefing-strip__answer-text {
@@ -1136,6 +1142,7 @@
   font-size: 0.9rem;
   line-height: 1.6;
   max-width: 100ch;
+  animation: viz-fadein 0.4s ease 0.1s both;
 }
 
 .briefing-strip__answer--error .briefing-strip__answer-text {
@@ -1191,13 +1198,14 @@
 
 /* ── Animation classes ────────────────────────────────────────────── */
 
-/* Lines draw in via stroke-dashoffset */
+/* Lines draw in via stroke-dashoffset.
+   The element must have stroke-dasharray AND stroke-dashoffset set to the
+   same value as inline props (done in JSX). The animation drives offset → 0. */
 .viz-line-anim {
   animation: viz-line-draw 0.55s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 @keyframes viz-line-draw {
-  from { stroke-dashoffset: attr(stroke-dasharray); opacity: 0.2; }
-  to   { stroke-dashoffset: 0; opacity: 1; }
+  to { stroke-dashoffset: 0; opacity: 1; }
 }
 
 /* Bars scale in from their origin (set via style.transformOrigin) */
