@@ -55,6 +55,24 @@ Vite prints the actual URL it bound to — usually `http://localhost:5173`, but 
 - **"SYNTHETIC SEED DATA" banner won't go away after adding the EIA key.** The backend loads `.env` once at startup — restart the uvicorn process after editing `.env`. If the banner still shows, hit `POST /api/admin/ingest` (see below) or restart with an empty `data/` folder.
 - **Yahoo Finance rate limits.** Repeatedly restarting the backend can trip Yahoo's per-IP throttle. Symptoms: `Error fetching ZC=F: Too Many Requests` in the terminal. Not fatal — the app keeps serving whatever prices are already in DuckDB. Wait 15–60 minutes or switch networks (e.g. phone hotspot) for a fresh IP.
 - **Port 8000 collides with Docker Desktop.** If Docker is running, it may hold port 8000. Quit Docker or run the backend on a different port and update `VITE_API_BASE_URL` accordingly.
+- **Signal Briefing 404s (`model_not_supported`).** IBM rotates watsonx.ai model IDs periodically — older Granite models get withdrawn as new ones ship. If the briefing endpoint returns a 404 saying the model was not found, deprecated, or removed, the hardcoded model ID needs to be bumped to whatever Granite instruct model is currently available on your watsonx region. List what your region supports with the snippet below (needs `APP_WATSONX_API_KEY` and `APP_WATSONX_URL` in `.env`), then update the two references at `backend-python/app/core/app_settings.py` (`watsonx_model_id`) and `backend-python/app/clients/watsonx_client.py` (`model_id` default) and restart the backend:
+
+  ```bash
+  cd backend-python && source .venv/bin/activate && python -c "
+  import httpx
+  from dotenv import dotenv_values
+  env = dotenv_values('.env')
+  r = httpx.post('https://iam.cloud.ibm.com/identity/token',
+      data={'grant_type': 'urn:ibm:params:oauth:grant-type:apikey', 'apikey': env['APP_WATSONX_API_KEY']}, timeout=30)
+  token = r.json()['access_token']
+  r = httpx.get(f\"{env.get('APP_WATSONX_URL', 'https://us-south.ml.cloud.ibm.com')}/ml/v1/foundation_model_specs?version=2024-05-01&limit=200\",
+      headers={'Authorization': f'Bearer {token}'}, timeout=30)
+  for m in sorted(r.json().get('resources', []), key=lambda x: x['model_id']):
+      if 'granite' in m['model_id'].lower():
+          states = ','.join(str(l.get('id')) for l in m.get('lifecycle', []))
+          print(f\"{m['model_id']}  [{states}]\")
+  "
+  ```
 
 ## Daily ingestion
 
