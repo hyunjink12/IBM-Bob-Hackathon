@@ -43,7 +43,7 @@ class WatsonxClient:
         api_key: str,
         project_id: str,
         base_url: str = "https://us-south.ml.cloud.ibm.com",
-        model_id: str = "ibm/granite-3-8b-instruct",
+        model_id: str = "ibm/granite-4-h-small",
     ) -> None:
         self._api_key = api_key
         self._project_id = project_id
