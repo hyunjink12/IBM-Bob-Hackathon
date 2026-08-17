@@ -36,6 +36,7 @@ class MergedDailyRow:
     ethanol_production_mbpd: float | None
     corn_oil_usd_per_pound: float | None
     wasde_corn_for_ethanol_mbu: float | None
+    d6_rin_usd_per_gallon: float | None = None
 
 
 @dataclass(frozen=True)
@@ -83,8 +84,13 @@ class DuckDbRepository:
             ethanol_stocks_mmbbl DOUBLE,
             ethanol_production_mbpd DOUBLE,
             corn_oil_usd_per_pound DOUBLE,
-            wasde_corn_for_ethanol_mbu DOUBLE
+            wasde_corn_for_ethanol_mbu DOUBLE,
+            d6_rin_usd_per_gallon DOUBLE
         )
+        """,
+        # Idempotent migration for databases seeded before RIN was tracked.
+        """
+        ALTER TABLE merged_daily ADD COLUMN IF NOT EXISTS d6_rin_usd_per_gallon DOUBLE
         """,
         """
         CREATE TABLE IF NOT EXISTS computed_margins (
@@ -243,8 +249,9 @@ class DuckDbRepository:
                     obs_date, corn_usd_per_bushel, ethanol_usd_per_gallon,
                     ddgs_usd_per_short_ton, rbob_usd_per_gallon, nat_gas_usd_per_mmbtu,
                     ethanol_stocks_mmbbl, ethanol_production_mbpd,
-                    corn_oil_usd_per_pound, wasde_corn_for_ethanol_mbu
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    corn_oil_usd_per_pound, wasde_corn_for_ethanol_mbu,
+                    d6_rin_usd_per_gallon
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (obs_date) DO UPDATE SET
                     corn_usd_per_bushel = excluded.corn_usd_per_bushel,
                     ethanol_usd_per_gallon = excluded.ethanol_usd_per_gallon,
@@ -254,7 +261,8 @@ class DuckDbRepository:
                     ethanol_stocks_mmbbl = excluded.ethanol_stocks_mmbbl,
                     ethanol_production_mbpd = excluded.ethanol_production_mbpd,
                     corn_oil_usd_per_pound = excluded.corn_oil_usd_per_pound,
-                    wasde_corn_for_ethanol_mbu = excluded.wasde_corn_for_ethanol_mbu
+                    wasde_corn_for_ethanol_mbu = excluded.wasde_corn_for_ethanol_mbu,
+                    d6_rin_usd_per_gallon = excluded.d6_rin_usd_per_gallon
                 """,
                 [
                     row.obs_date,
@@ -267,6 +275,7 @@ class DuckDbRepository:
                     row.ethanol_production_mbpd,
                     row.corn_oil_usd_per_pound,
                     row.wasde_corn_for_ethanol_mbu,
+                    row.d6_rin_usd_per_gallon,
                 ],
             )
         return len(rows)
@@ -536,6 +545,8 @@ class DuckDbRepository:
 
     @staticmethod
     def _row_to_merged_daily(row: tuple[Any, ...]) -> MergedDailyRow:
+        # Column count guarded by len(row) so DBs migrated before RIN gracefully
+        # return None for d6_rin_usd_per_gallon instead of IndexError.
         return MergedDailyRow(
             obs_date=row[0],
             corn_usd_per_bushel=row[1],
@@ -547,6 +558,7 @@ class DuckDbRepository:
             ethanol_production_mbpd=row[7],
             corn_oil_usd_per_pound=row[8],
             wasde_corn_for_ethanol_mbu=row[9],
+            d6_rin_usd_per_gallon=row[10] if len(row) > 10 else None,
         )
 
     def upsert_cot_reports(self, reports: list) -> int:

@@ -17,8 +17,9 @@ SERIES_ETHANOL_STOCKS = "ethanol_stocks_mmbbl"
 SERIES_ETHANOL_PRODUCTION = "ethanol_production_mbpd"
 SERIES_CORN_OIL = "corn_oil_usd_per_pound"
 SERIES_WASDE_CORN_ETHANOL = "wasde_corn_for_ethanol_mbu"
+SERIES_D6_RIN = "d6_rin_usd_per_gallon"
 
-WEEKLY_SERIES = {SERIES_ETHANOL_STOCKS, SERIES_ETHANOL_PRODUCTION}
+WEEKLY_SERIES = {SERIES_ETHANOL_STOCKS, SERIES_ETHANOL_PRODUCTION, SERIES_D6_RIN}
 MONTHLY_SERIES = {SERIES_WASDE_CORN_ETHANOL}
 
 
@@ -108,6 +109,11 @@ class SeriesMergeManager:
                     ),
                     wasde_corn_for_ethanol_mbu=self._value_on_date(
                         series_map.get(SERIES_WASDE_CORN_ETHANOL, []),
+                        obs_date,
+                        forward_fill=True,
+                    ),
+                    d6_rin_usd_per_gallon=self._value_on_date(
+                        series_map.get(SERIES_D6_RIN, []),
                         obs_date,
                         forward_fill=True,
                     ),
