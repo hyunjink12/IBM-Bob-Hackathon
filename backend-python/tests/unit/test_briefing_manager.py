@@ -192,7 +192,7 @@ def test_backtest_reports_included_in_context():
 
     client = _configured_client()
     client.generate = MagicMock(
-        side_effect=lambda prompt: captured_prompt.append(prompt) or "ok"
+        side_effect=lambda prompt, **kwargs: captured_prompt.append(prompt) or "ok"
     )
 
     mgr = BriefingManager(repository=repo, watsonx_client=client, backtester=bt)
