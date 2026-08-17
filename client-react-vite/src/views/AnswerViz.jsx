@@ -290,8 +290,10 @@ function MarginDriverBars({ data }) {
   const maxAbs = Math.max(...changes.map((c) => Math.abs(c.pct ?? 0)), 0.001)
 
   const LABEL_W = 52
-  const HALF_W  = (VW - LABEL_W) / 2   // space on each side of zero
-  const ZERO_X  = LABEL_W + HALF_W
+  const VALUE_W = 40                     // reserved column on BOTH sides for value labels
+  const GUTTER  = 6                      // gap between bar tip and value label
+  const HALF_W  = (VW - LABEL_W - VALUE_W * 2) / 2   // usable bar width on each side of zero
+  const ZERO_X  = LABEL_W + VALUE_W + HALF_W        // zero axis shifted right by neg-value column
 
   const ROW_H = 22
   const VH    = changes.length * ROW_H + 20
@@ -310,9 +312,13 @@ function MarginDriverBars({ data }) {
           const barX = pos ? ZERO_X : ZERO_X - barW
           const sign = pos ? '+' : ''
 
-          // Value label always sits just right of ZERO_X so it never
-          // collides with the row-label column on the left side.
-          const valX = ZERO_X + 5
+          // Value label always sits just past the bar tip on the outside so
+          // it can't be obscured by the bar fill. Zero-length bars fall back
+          // to sitting flush with the axis rather than floating in space.
+          const valX = pos
+            ? ZERO_X + Math.max(barW, 0) + GUTTER
+            : ZERO_X - Math.max(barW, 0) - GUTTER
+          const valAnchor = pos ? 'start' : 'end'
 
           return (
             <g key={label}>
@@ -328,7 +334,7 @@ function MarginDriverBars({ data }) {
                 }}
               />
               <text
-                x={valX} y={y + 12} fontSize="9" fill="#9aa5b1" textAnchor="start"
+                x={valX} y={y + 12} fontSize="9" fill="#9aa5b1" textAnchor={valAnchor}
                 className="answer-viz--fadein"
                 style={{ animationDelay: `${0.35 + i * 0.07}s` }}
               >
