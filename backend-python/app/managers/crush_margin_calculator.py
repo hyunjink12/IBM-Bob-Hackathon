@@ -15,6 +15,7 @@ class CrushMarginResult:
     margin_per_bushel: float
     margin_per_gallon: float
     corn_oil_included: bool
+    rin_included: bool = False
 
 
 @dataclass(frozen=True)
@@ -34,16 +35,21 @@ class MarginComposition:
     Casual: what each lever contributes to today's margin.
 
     Positive numbers are revenue contributions; negative are cost contributions.
-    Sum of all fields equals `margin_per_bushel` in CrushMarginResult.
+    Sum of all fields (except the *_included flags) equals `margin_per_bushel`
+    in CrushMarginResult. RIN revenue is only non-zero when a D6 RIN price is
+    present on the merged row — flagged by `rin_included` so the UI can
+    distinguish "no RIN data" from "RIN data present but zero contribution".
     """
 
     ethanol_revenue: float
     ddgs_revenue: float
     corn_oil_revenue: float
+    rin_revenue: float
     corn_cost: float
     nat_gas_cost: float
     misc_opex_cost: float
     corn_oil_included: bool
+    rin_included: bool
 
 
 class CrushMarginCalculator:
@@ -76,8 +82,12 @@ class CrushMarginCalculator:
             corn_oil_revenue = (
                 row.corn_oil_usd_per_pound * self._config.corn_oil_pounds_per_bushel
             )
+        rin_included = row.d6_rin_usd_per_gallon is not None
+        rin_revenue = (
+            row.d6_rin_usd_per_gallon * self._config.ethanol_gallons_per_bushel
+        ) if rin_included else 0.0
 
-        total_revenue = ethanol_revenue + ddgs_revenue + corn_oil_revenue
+        total_revenue = ethanol_revenue + ddgs_revenue + corn_oil_revenue + rin_revenue
         corn_cost = row.corn_usd_per_bushel
         gas_cost = row.nat_gas_usd_per_mmbtu * self._config.natural_gas_mmbtu_per_bushel
         misc_cost = self._config.misc_opex_per_bushel
@@ -89,6 +99,7 @@ class CrushMarginCalculator:
             margin_per_bushel=margin_per_bushel,
             margin_per_gallon=margin_per_gallon,
             corn_oil_included=corn_oil_included,
+            rin_included=rin_included,
         )
 
     def decompose(self, row: MergedDailyRow) -> MarginComposition | None:
@@ -112,15 +123,21 @@ class CrushMarginCalculator:
             corn_oil_revenue = (
                 row.corn_oil_usd_per_pound * self._config.corn_oil_pounds_per_bushel
             )
+        rin_included = row.d6_rin_usd_per_gallon is not None
+        rin_revenue = (
+            row.d6_rin_usd_per_gallon * self._config.ethanol_gallons_per_bushel
+        ) if rin_included else 0.0
 
         return MarginComposition(
             ethanol_revenue=ethanol_revenue,
             ddgs_revenue=ddgs_revenue,
             corn_oil_revenue=corn_oil_revenue,
+            rin_revenue=rin_revenue,
             corn_cost=-row.corn_usd_per_bushel,
             nat_gas_cost=-(row.nat_gas_usd_per_mmbtu * self._config.natural_gas_mmbtu_per_bushel),
             misc_opex_cost=-self._config.misc_opex_per_bushel,
             corn_oil_included=corn_oil_included,
+            rin_included=rin_included,
         )
 
     def calculate_spread(self, row: MergedDailyRow) -> CrushSpreadResult | None:
