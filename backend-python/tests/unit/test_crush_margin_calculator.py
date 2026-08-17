@@ -67,6 +67,67 @@ def test_ddgs_uses_short_ton_not_per_pound(
 
 
 @pytest.mark.unit
+def test_rin_revenue_lifts_margin_by_exactly_rin_price_times_yield(
+    crush_config: CrushModelConfig,
+    sample_row: MergedDailyRow,
+) -> None:
+    """RIN present must add exactly (rin_price × 2.8) to $/bu margin."""
+    calculator = CrushMarginCalculator(crush_config)
+    without_rin = calculator.calculate(sample_row)
+    with_rin_row = MergedDailyRow(
+        **{**sample_row.__dict__, "d6_rin_usd_per_gallon": 0.60}
+    )
+    with_rin = calculator.calculate(with_rin_row)
+    assert without_rin is not None and with_rin is not None
+    assert without_rin.rin_included is False
+    assert with_rin.rin_included is True
+    expected_lift = 0.60 * crush_config.ethanol_gallons_per_bushel
+    assert with_rin.margin_per_bushel == pytest.approx(
+        without_rin.margin_per_bushel + expected_lift
+    )
+
+
+@pytest.mark.unit
+def test_rin_missing_leaves_calculation_identical_to_pre_rin_math(
+    crush_config: CrushModelConfig,
+    sample_row: MergedDailyRow,
+) -> None:
+    """Backward compat: sample_row has no RIN → margin math must be unchanged."""
+    calculator = CrushMarginCalculator(crush_config)
+    result = calculator.calculate(sample_row)
+    assert result is not None
+    assert result.rin_included is False
+    # Recompute the pre-RIN expression by hand and compare
+    ethanol_rev = sample_row.ethanol_usd_per_gallon * crush_config.ethanol_gallons_per_bushel
+    ddgs_rev = crush_config.ddgs_revenue_per_bushel(sample_row.ddgs_usd_per_short_ton)
+    corn_oil_rev = sample_row.corn_oil_usd_per_pound * crush_config.corn_oil_pounds_per_bushel
+    corn_cost = sample_row.corn_usd_per_bushel
+    gas_cost = sample_row.nat_gas_usd_per_mmbtu * crush_config.natural_gas_mmbtu_per_bushel
+    expected = ethanol_rev + ddgs_rev + corn_oil_rev - corn_cost - gas_cost - crush_config.misc_opex_per_bushel
+    assert result.margin_per_bushel == pytest.approx(expected)
+
+
+@pytest.mark.unit
+def test_margin_composition_sums_to_margin_per_bushel_with_rin(
+    crush_config: CrushModelConfig,
+    sample_row: MergedDailyRow,
+) -> None:
+    """decompose() lines must sum to calculate() total, including the RIN line."""
+    calculator = CrushMarginCalculator(crush_config)
+    with_rin_row = MergedDailyRow(
+        **{**sample_row.__dict__, "d6_rin_usd_per_gallon": 0.55}
+    )
+    result = calculator.calculate(with_rin_row)
+    comp = calculator.decompose(with_rin_row)
+    assert result is not None and comp is not None
+    component_sum = (
+        comp.ethanol_revenue + comp.ddgs_revenue + comp.corn_oil_revenue
+        + comp.rin_revenue + comp.corn_cost + comp.nat_gas_cost + comp.misc_opex_cost
+    )
+    assert component_sum == pytest.approx(result.margin_per_bushel)
+
+
+@pytest.mark.unit
 def test_spread_matches_cme_crush_formula(
     crush_config: CrushModelConfig,
     sample_row: MergedDailyRow,
