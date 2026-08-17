@@ -520,6 +520,31 @@
 .composition__row.is-revenue .composition__value { color: var(--pos-strong); }
 .composition__row.is-cost    .composition__value { color: var(--neg-strong); }
 
+/* Panel legend — used to explain non-obvious color conventions
+   (e.g. COT deltas colored by market impact, not arithmetic sign). */
+.panel__legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.85rem 0 0;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  line-height: 1.4;
+}
+.panel__legend-swatch {
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 2px;
+  margin-right: 0.15rem;
+}
+.panel__legend-swatch--bull { background: var(--pos-strong); }
+.panel__legend-swatch--bear { background: var(--neg-strong); }
+.panel__legend-note { opacity: 0.85; }
+
 .composition__total {
   margin-top: 0.55rem;
   padding-top: 0.55rem;
