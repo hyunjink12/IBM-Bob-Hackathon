@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from app.managers.series_merge_manager import (
     SERIES_CORN,
+    SERIES_D6_RIN,
     SERIES_ETHANOL,
     SERIES_ETHANOL_PRODUCTION,
     SERIES_ETHANOL_STOCKS,
@@ -26,7 +27,7 @@ class SeedDataStatusManager:
     signal the banner needs.
     """
 
-    # Only series that Yahoo or EIA are expected to replace.
+    # Only series that a live source is expected to replace.
     LIVE_FEED_SERIES = (
         SERIES_CORN,
         SERIES_ETHANOL,
@@ -34,9 +35,10 @@ class SeedDataStatusManager:
         SERIES_RBOB,
         SERIES_ETHANOL_STOCKS,
         SERIES_ETHANOL_PRODUCTION,
+        SERIES_D6_RIN,
     )
 
-    LIVE_SOURCES = frozenset({"eia", "yahoo_futures"})
+    LIVE_SOURCES = frozenset({"eia", "yahoo_futures", "epa_emts"})
 
     def __init__(self, repository: DuckDbRepository) -> None:
         self._repository = repository

@@ -34,7 +34,8 @@ class SeriesMergeManager:
     """
 
     # yahoo_futures is the live Yahoo client source tag (not "yahoo").
-    SOURCE_PRIORITY = {"eia": 3, "yahoo_futures": 2, "seed": 1}
+    # epa_emts is the EPA RIN CSV file-drop client. All live sources outrank seed.
+    SOURCE_PRIORITY = {"eia": 3, "epa_emts": 3, "yahoo_futures": 2, "seed": 1}
 
     def __init__(self, repository: DuckDbRepository) -> None:
         self._repository = repository

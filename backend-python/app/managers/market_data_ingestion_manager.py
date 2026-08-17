@@ -7,6 +7,7 @@ from datetime import date
 
 from app.clients.cftc_cot_client import CftcCotClient
 from app.clients.eia_client import EiaClient
+from app.clients.epa_rin_file_client import EpaRinFileClient
 from app.clients.yahoo_futures_client import YahooFuturesClient
 from app.managers.crush_margin_calculator import CrushMarginCalculator
 from app.managers.seed_data_provider import SeedDataProvider
@@ -36,6 +37,7 @@ class MarketDataIngestionManager:
         futures_client: YahooFuturesClient | None = None,
         seed_provider: SeedDataProvider | None = None,
         cot_client: CftcCotClient | None = None,
+        epa_rin_client: EpaRinFileClient | None = None,
     ) -> None:
         self._repository = repository
         self._crush_config = crush_config
@@ -43,6 +45,7 @@ class MarketDataIngestionManager:
         self._futures_client = futures_client or YahooFuturesClient()
         self._seed_provider = seed_provider or SeedDataProvider()
         self._cot_client = cot_client or CftcCotClient()
+        self._epa_rin_client = epa_rin_client or EpaRinFileClient()
         self._merge_manager = SeriesMergeManager(repository)
         self._margin_calculator = CrushMarginCalculator(crush_config)
         self._z_score_manager = ZScoreManager()
@@ -126,6 +129,14 @@ class MarketDataIngestionManager:
                 observations.extend(self._eia_client.fetch_ethanol_weekly())
             except Exception as exc:
                 errors.append(f"eia: {exc}")
+
+        # EPA RIN prices from the locally-dropped CSV export. No network call;
+        # user re-runs the EPA dashboard export weekly and overwrites the file.
+        if self._epa_rin_client.is_configured:
+            try:
+                observations.extend(self._epa_rin_client.fetch())
+            except Exception as exc:
+                errors.append(f"epa_rin: {exc}")
 
         if not observations and self._repository.count_merged_daily_rows() == 0:
             observations.extend(self._seed_provider.build_observations())
