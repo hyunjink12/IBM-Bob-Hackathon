@@ -9,6 +9,8 @@ from datetime import date, timedelta
 from app.clients.cftc_cot_client import CftcCotClient
 from app.clients.watsonx_client import WatsonxClient
 from app.managers.crush_margin_calculator import CrushMarginCalculator
+from app.managers.release_schedule_manager import ReleaseScheduleManager
+from app.managers.series_merge_manager import SERIES_D6_RIN, SERIES_WASDE_CORN_ETHANOL
 from app.managers.warning_backtester import RuleBacktestReport, WarningRuleBacktester
 from app.models.crush_model_config import CrushModelConfig
 from app.storage.duckdb_repository import DuckDbRepository
@@ -190,7 +192,9 @@ class BriefingManager:
 
     PRESET_QUESTIONS: dict[str, str] = {
         "eia_interpretation": "Interpret the latest EIA weekly ethanol release",
+        "wasde_interpretation": "Interpret the latest USDA WASDE corn-for-ethanol figure",
         "cot_interpretation": "Summarise the latest CFTC COT positioning for corn",
+        "rin_market": "Summarise the current EPA D6 RIN market",
         "margin_drivers": "What is driving the crush margin right now?",
     }
 
@@ -225,7 +229,9 @@ class BriefingManager:
 
         context_fn = {
             "eia_interpretation": self._eia_question_context,
+            "wasde_interpretation": self._wasde_question_context,
             "cot_interpretation": self._cot_question_context,
+            "rin_market": self._rin_question_context,
             "margin_drivers": self._margin_drivers_context,
         }[question_id]
         system_prompt = _QUESTION_SYSTEM_PROMPTS[question_id]
@@ -344,6 +350,103 @@ class BriefingManager:
             ],
         }
 
+    def _rin_question_context(self) -> dict:
+        """
+        D6 RIN market context: latest print, WoW, 5Y percentile, share of margin.
+
+        Numbers are pre-computed so Granite narrates instead of ranking or
+        computing arithmetic across a long series.
+        """
+        rin_rows = self._repository.fetch_raw_observations_by_series(SERIES_D6_RIN)
+        if not rin_rows:
+            return {"d6_rin": None}
+
+        latest = rin_rows[-1]
+        prior = rin_rows[-2] if len(rin_rows) >= 2 else None
+        wow_abs = (latest.value - prior.value) if prior else None
+        wow_pct = (wow_abs / prior.value) if (wow_abs is not None and prior.value) else None
+
+        all_values = sorted(row.value for row in rin_rows)
+        pct_rank = round(
+            sum(1 for v in all_values if v <= latest.value) / len(all_values), 3
+        )
+
+        four_week = rin_rows[-4:] if len(rin_rows) >= 4 else rin_rows
+        trend_4w = [
+            {"date": row.obs_date.isoformat(), "price_usd_per_gallon": round(row.value, 4)}
+            for row in four_week
+        ]
+
+        # RIN share of current margin — the insight from the handoff, live.
+        rin_share_of_margin_pct: float | None = None
+        latest_merged = self._repository.fetch_latest_merged_daily()
+        latest_margin = self._repository.fetch_latest_computed_margin()
+        if latest_merged and latest_margin and latest_margin.margin_per_bushel > 0:
+            calculator = CrushMarginCalculator(CrushModelConfig.default())
+            comp = calculator.decompose(latest_merged)
+            if comp is not None and comp.rin_included:
+                rin_share_of_margin_pct = round(
+                    comp.rin_revenue / latest_margin.margin_per_bushel * 100, 1
+                )
+
+        return {
+            "d6_rin": {
+                "latest_price_usd_per_gallon": round(latest.value, 4),
+                "latest_report_date": latest.obs_date.isoformat(),
+                "wow_abs_change": round(wow_abs, 4) if wow_abs is not None else None,
+                "wow_pct_change": round(wow_pct, 4) if wow_pct is not None else None,
+                "percentile_full_history": pct_rank,
+                "history_min": round(all_values[0], 4),
+                "history_max": round(all_values[-1], 4),
+                "history_median": round(all_values[len(all_values) // 2], 4),
+                "history_years": rin_rows[-1].obs_date.year - rin_rows[0].obs_date.year,
+                "recent_4w_prints": trend_4w,
+            },
+            "rin_share_of_current_margin_pct": rin_share_of_margin_pct,
+        }
+
+    def _wasde_question_context(self) -> dict:
+        """
+        USDA WASDE corn-for-ethanol context: latest reading, trend, next release.
+
+        Ships pre-computed deltas + a 6-report trend direction so Granite doesn't
+        have to compute revisions in its head.
+        """
+        wasde_rows = self._repository.fetch_raw_observations_by_series(
+            SERIES_WASDE_CORN_ETHANOL
+        )
+        if not wasde_rows:
+            return {"wasde": None}
+
+        latest = wasde_rows[-1]
+        prior = wasde_rows[-2] if len(wasde_rows) >= 2 else None
+        delta_vs_prior = (latest.value - prior.value) if prior else None
+
+        recent_6 = wasde_rows[-6:] if len(wasde_rows) >= 6 else wasde_rows
+        trend = [
+            {"report_date": row.obs_date.isoformat(), "corn_for_ethanol_mbu": round(row.value, 0)}
+            for row in recent_6
+        ]
+        # Direction of last 6 reports: are analysts revising up or down?
+        revision_direction = "flat"
+        if len(recent_6) >= 2:
+            net = recent_6[-1].value - recent_6[0].value
+            revision_direction = "up" if net > 25 else ("down" if net < -25 else "flat")
+
+        next_release = ReleaseScheduleManager().next_wasde_release()
+
+        return {
+            "wasde": {
+                "latest_report_date": latest.obs_date.isoformat(),
+                "corn_for_ethanol_mbu": round(latest.value, 0),
+                "delta_vs_prior_mbu": round(delta_vs_prior, 0) if delta_vs_prior is not None else None,
+                "revision_direction_last_6_reports": revision_direction,
+                "recent_6_reports": trend,
+                "next_release_date": next_release.released_at_et.date().isoformat(),
+                "next_release_is_approximate": next_release.is_approximate,
+            },
+        }
+
     def _margin_drivers_context(self) -> dict:
         """
         Latest prices, per-lever contribution, and 4-week trend for margin drivers.
@@ -428,11 +531,25 @@ class BriefingManager:
                 "signal_label": latest_margin.signal_label,
             }
 
+        # Raw 4-week trend rows for the frontend MarginDriverBars viz —
+        # kept alongside the ranked lists so the chart survives and Granite
+        # can also spot patterns not captured by the ranked summary.
+        price_trend: list[dict] = [
+            {
+                "date": row.obs_date.isoformat(),
+                "corn_usd_per_bushel": row.corn_usd_per_bushel,
+                "ethanol_usd_per_gallon": row.ethanol_usd_per_gallon,
+                "nat_gas_usd_per_mmbtu": row.nat_gas_usd_per_mmbtu,
+            }
+            for row in recent[-5:]
+        ]
+
         return {
             "current_margin": current_margin,
             "ranked_contributions_abs": ranked_contributions,
             "margin_composition_by_label": composition_by_label,
             "ranked_price_moves_pct": price_moves,
+            "recent_price_trend": price_trend,
         }
 
 
@@ -460,6 +577,37 @@ _QUESTION_SYSTEM_PROMPTS: dict[str, str] = {
         "close with what a shift in fund positioning would mean for corn prices and therefore "
         "the ethanol crush margin. "
         "No bullet points. No markdown. No invented numbers. Maximum 4 sentences."
+    ),
+    "rin_market": (
+        "You are a commodity analyst summarising the EPA D6 corn ethanol RIN market for a trader. "
+        "Write 3-4 sentences in plain prose. Follow these rules exactly:\n"
+        "1. Open with the current D6 RIN price and its `percentile_full_history` — cite both verbatim.\n"
+        "2. State the WoW change from `wow_pct_change` (direction and magnitude).\n"
+        "3. Cite `rin_share_of_current_margin_pct`. If above 40%, note plant economics are heavily "
+        "policy-dependent at this level.\n"
+        "4. DIRECTIONAL RULE FOR THE CLOSING SENTENCE: D6 RIN is a REVENUE line for ethanol producers. "
+        "A HIGHER RIN price = MORE producer revenue = FATTER margin. A LOWER RIN price = LESS producer "
+        "revenue = THINNER margin. If closing on what a reversion to `history_median` would mean, and the "
+        "current price is ABOVE the median, that reversion is UNFAVORABLE for producers (would strip "
+        "revenue). If the current price is BELOW the median, reversion would be FAVORABLE. Do not flip "
+        "these directions.\n"
+        "No bullet points, no markdown, no invented numbers. Maximum 4 sentences."
+    ),
+    "wasde_interpretation": (
+        "You are a commodity analyst interpreting the latest USDA WASDE corn-for-ethanol figure. "
+        "Write 3-4 sentences in plain prose. Follow these rules exactly:\n"
+        "1. Cite `corn_for_ethanol_mbu` and `delta_vs_prior_mbu` verbatim. State the direction (up/down) "
+        "and magnitude of the month-over-month revision.\n"
+        "2. TREND RULE: You MUST cite `revision_direction_last_6_reports` verbatim. Do NOT invent a trend "
+        "that contradicts it. If it says 'up', 6-report trend is UP; 'down' is DOWN; 'flat' is FLAT. "
+        "Do not describe the trend using a word other than the one in the field.\n"
+        "3. DIRECTIONAL RULE: Higher WASDE corn-for-ethanol = MORE demand for corn = firmer nearby corn "
+        "basis = COMPRESSES the physical crush spread (because corn cost rises). Lower WASDE = LESS "
+        "demand = softer basis = WIDER crush spread. Do not flip these.\n"
+        "4. Cite `next_release_date` so the trader knows when to expect the next print.\n"
+        "5. Close with the implication for the CORN SIDE of the crush margin over the next 30 days, "
+        "consistent with the directional rule above.\n"
+        "No bullet points, no markdown, no invented numbers. Maximum 4 sentences."
     ),
     "margin_drivers": (
         "You are a commodity analyst explaining what is driving the ethanol crush margin. "
