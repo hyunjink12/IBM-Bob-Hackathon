@@ -88,6 +88,19 @@ curl -X POST http://localhost:8000/api/admin/ingest \
   -H "Authorization: Bearer $APP_ADMIN_TOKEN"
 ```
 
+## Refreshing D6 RIN prices
+
+The dashboard's margin math includes D6 RIN revenue (typically $1–2/bu at current prices — a real chunk of plant P&L). Prices come from EPA's public [RIN Trades and Price Information dashboard](https://www.epa.gov/fuels-registration-reporting-and-compliance-help/rin-trades-and-price-information) via a manual weekly refresh:
+
+1. Open the EPA page linked above and select the **RIN Price Data** view from the dropdown.
+2. Multi-select all **Transfer Years** (click first year, Shift-click last year).
+3. Keep **Fuel (D Code)** set to `D6`.
+4. Click **Export Table** — downloads a CSV.
+5. Overwrite `backend-python/data/epa/rin_prices.csv` with the fresh download (keep the same filename).
+6. Trigger an ingest (`curl -X POST http://localhost:8000/api/admin/ingest -H "Authorization: Bearer $APP_ADMIN_TOKEN"` or restart the backend). The `EpaRinFileClient` parses the file, keeps only current-vintage Unverified D6 rows, and upserts them.
+
+No network call — this is a file-drop pattern. Cadence is up to you; EPA publishes new prints weekly. If the CSV is missing, the RIN revenue line drops out of the margin composition and the RIN card shows a dash, everything else keeps working.
+
 ## Tests
 
 ```bash
