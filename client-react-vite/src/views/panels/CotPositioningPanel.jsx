@@ -104,6 +104,14 @@ export function CotPositioningPanel({
         }
         events={buildCotEvents(series)}
       />
+
+      <p className="panel__legend">
+        <span className="panel__legend-swatch panel__legend-swatch--bull" /> bullish for corn
+        <span className="panel__legend-swatch panel__legend-swatch--bear" /> bearish for corn
+        <span className="panel__legend-note">
+          — direction, not sign. A larger short position is red because it&apos;s bearish for corn, even though the delta is positive.
+        </span>
+      </p>
     </section>
   )
 }
