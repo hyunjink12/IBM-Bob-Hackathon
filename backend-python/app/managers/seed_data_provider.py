@@ -9,30 +9,6 @@ from datetime import date, datetime, timedelta, timezone
 from app.storage.duckdb_repository import RawObservation
 
 
-def _rin_trend_target(obs_date: date) -> float:
-    """
-    Piecewise D6 RIN price target anchored to real historical trajectory.
-
-    Casual: sketches the "peak → collapse → recovery" arc D6 actually ran.
-
-    Real weekly D6 prints roughly: $1.30–1.80 (2021–22 highs) → collapse to
-    $0.45–0.70 (2023–24) after SRE and blending economics shifted, then modest
-    recovery to $0.55–0.90 (2025–26). Seed values blend toward these targets
-    so a 5-year synthetic history has a recognisable shape without pretending
-    to be a specific week's real print.
-    """
-    year = obs_date.year
-    if year <= 2022:
-        return 1.55
-    if year == 2023:
-        return 1.10                     # mid-collapse
-    if year == 2024:
-        return 0.55                     # trough
-    if year == 2025:
-        return 0.70
-    return 0.80                         # 2026+
-
-
 class SeedDataProvider:
     """
     Generates realistic synthetic market history for local demo.
@@ -69,12 +45,6 @@ class SeedDataProvider:
         stocks = 24.0
         production = 1050.0
         wasde = 5400.0
-        # D6 RIN weekly price ($/gal). Starts near 2021 highs ($1.55), trends
-        # down through the 2023 collapse (SRE decisions + biofuel oversupply),
-        # bottoms in 2024 (~$0.45), and modestly recovers into 2026. Piecewise
-        # target below gets blended with each new sample so seed history has a
-        # visually recognisable "collapse + recovery" arc for demo purposes.
-        rin_d6 = 1.55
 
         for offset in range(day_count):
             obs_date = start + timedelta(days=offset)
@@ -112,21 +82,11 @@ class SeedDataProvider:
                     )
                 )
 
-            # Weekly D6 RIN observation on Fridays (RIN market typically prints
-            # Friday close). Piecewise trend anchored to real historical arc:
-            # highs 2021→22, collapse through 2023, bottom 2024, recovery 2025→26.
-            if obs_date.weekday() == 4:
-                target_rin = _rin_trend_target(obs_date)
-                rin_d6 = 0.85 * rin_d6 + 0.15 * target_rin + self._random.uniform(-0.05, 0.05)
-                observations.append(
-                    RawObservation(
-                        "seed",
-                        "d6_rin_usd_per_gallon",
-                        obs_date,
-                        max(rin_d6, 0.10),
-                        fetched_at,
-                    )
-                )
+            # D6 RIN prices intentionally NOT seeded here. Real EPA weekly data
+            # lands via EpaRinFileClient; when the CSV is absent, RIN simply
+            # stays None on merged_daily rather than showing fabricated values.
+            # The margin calculator handles missing RIN gracefully (rin_included
+            # falls back to False and the RIN revenue line drops out).
 
             if obs_date.day == 12:
                 wasde += self._random.uniform(-40, 40)
