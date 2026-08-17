@@ -9,6 +9,30 @@ from datetime import date, datetime, timedelta, timezone
 from app.storage.duckdb_repository import RawObservation
 
 
+def _rin_trend_target(obs_date: date) -> float:
+    """
+    Piecewise D6 RIN price target anchored to real historical trajectory.
+
+    Casual: sketches the "peak → collapse → recovery" arc D6 actually ran.
+
+    Real weekly D6 prints roughly: $1.30–1.80 (2021–22 highs) → collapse to
+    $0.45–0.70 (2023–24) after SRE and blending economics shifted, then modest
+    recovery to $0.55–0.90 (2025–26). Seed values blend toward these targets
+    so a 5-year synthetic history has a recognisable shape without pretending
+    to be a specific week's real print.
+    """
+    year = obs_date.year
+    if year <= 2022:
+        return 1.55
+    if year == 2023:
+        return 1.10                     # mid-collapse
+    if year == 2024:
+        return 0.55                     # trough
+    if year == 2025:
+        return 0.70
+    return 0.80                         # 2026+
+
+
 class SeedDataProvider:
     """
     Generates realistic synthetic market history for local demo.
