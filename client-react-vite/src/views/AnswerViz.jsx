@@ -14,9 +14,11 @@ const VW = 280
 
 export function AnswerViz({ questionId, chartData }) {
   if (!chartData) return null
-  if (questionId === 'eia_interpretation') return <EiaSparklines data={chartData} />
-  if (questionId === 'cot_interpretation') return <CotBars data={chartData} />
-  if (questionId === 'margin_drivers')     return <MarginDriverBars data={chartData} />
+  if (questionId === 'eia_interpretation')   return <EiaSparklines data={chartData} />
+  if (questionId === 'wasde_interpretation') return <WasdeTrendBars data={chartData} />
+  if (questionId === 'cot_interpretation')   return <CotBars data={chartData} />
+  if (questionId === 'rin_market')           return <RinSparkline data={chartData} />
+  if (questionId === 'margin_drivers')       return <MarginDriverBars data={chartData} />
   return null
 }
 
@@ -366,4 +368,154 @@ function LegendDot({ color, label }) {
       {label}
     </span>
   )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RIN market: 4-week price sparkline with a percentile marker on the right.
+// Reads data.d6_rin.recent_4w_prints + data.d6_rin.percentile_full_history.
+// ─────────────────────────────────────────────────────────────────────────────
+function RinSparkline({ data }) {
+  const rin = data?.d6_rin
+  const prints = rin?.recent_4w_prints ?? []
+  if (prints.length < 2) return null
+
+  const VH = 90
+  const pad = { t: 12, b: 22, l: 6, r: 60 }
+  const iW = VW - pad.l - pad.r
+  const iH = VH - pad.t - pad.b
+
+  const values = prints.map((p) => p.price_usd_per_gallon)
+  const min = Math.min(...values) * 0.98
+  const max = Math.max(...values) * 1.02
+  const range = max === min ? 1 : max - min
+  const points = values.map((v, i) => ({
+    x: pad.l + (i / (values.length - 1)) * iW,
+    y: pad.t + iH - ((v - min) / range) * iH,
+  }))
+  const linePath = points
+    .map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+    .join(' ')
+  const pathLen = pointsPathLength(points)
+
+  const latest = points[points.length - 1]
+  const pctRank = rin?.percentile_full_history
+  const pctLabel = pctRank == null ? '—' : `${Math.round(pctRank * 100)}%ile`
+  const priceLabel = `$${values[values.length - 1].toFixed(2)}`
+  const firstDate = prints[0].date?.slice(5)
+  const lastDate = prints[prints.length - 1].date?.slice(5)
+
+  return (
+    <div className="answer-viz">
+      <svg width="100%" viewBox={`0 0 ${VW} ${VH}`} className="answer-viz__svg" aria-hidden="true">
+        <path
+          d={linePath}
+          fill="none"
+          stroke="#f0a878"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="viz-line-anim"
+          style={{ strokeDasharray: pathLen, strokeDashoffset: pathLen }}
+        />
+        <circle cx={latest.x} cy={latest.y} r="2.5" fill="#f0a878"
+                className="viz-dot-anim" style={{ animationDelay: '0.5s' }} />
+        <text x={VW - pad.r + 8} y={pad.t + 6} fontSize="10.5" fill="#f0a878" fontWeight="600"
+              className="answer-viz--fadein" style={{ animationDelay: '0.4s' }}>
+          {priceLabel}/gal
+        </text>
+        <text x={VW - pad.r + 8} y={pad.t + 20} fontSize="8.5" fill="#9aa5b1"
+              className="answer-viz--fadein" style={{ animationDelay: '0.5s' }}>
+          {pctLabel} of 5Y
+        </text>
+        <text x={VW / 2} y={VH - 6} fontSize="8" fill="#57606a" textAnchor="middle"
+              className="answer-viz--fadein" style={{ animationDelay: '0.6s' }}>
+          D6 RIN · {firstDate} → {lastDate}
+        </text>
+      </svg>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WASDE outlook: mini bar chart of the last 6 corn-for-ethanol readings.
+// Right column shows the latest value + delta vs prior report.
+// Reads data.wasde.recent_6_reports + data.wasde.delta_vs_prior_mbu.
+// ─────────────────────────────────────────────────────────────────────────────
+function WasdeTrendBars({ data }) {
+  const wasde = data?.wasde
+  const reports = wasde?.recent_6_reports ?? []
+  if (reports.length < 2) return null
+
+  const VH = 96
+  const pad = { t: 10, b: 22, l: 6, r: 72 }
+  const iW = VW - pad.l - pad.r
+  const iH = VH - pad.t - pad.b
+
+  const values = reports.map((r) => r.corn_for_ethanol_mbu)
+  const min = Math.min(...values) * 0.985
+  const max = Math.max(...values) * 1.015
+  const range = max === min ? 1 : max - min
+  const barW = Math.max((iW / reports.length) * 0.7, 4)
+  const step = iW / reports.length
+
+  const latestVal = values[values.length - 1]
+  const delta = wasde?.delta_vs_prior_mbu
+  const deltaColor = delta == null ? '#9aa5b1' : delta > 0 ? '#5cba82' : delta < 0 ? '#d47b7b' : '#9aa5b1'
+  const deltaSign = delta == null ? '' : delta > 0 ? '+' : ''
+  const deltaLabel = delta == null ? '—' : `${deltaSign}${Math.round(delta)} MBU`
+  const nextDate = wasde?.next_release_date?.slice(5) ?? '—'
+
+  return (
+    <div className="answer-viz">
+      <svg width="100%" viewBox={`0 0 ${VW} ${VH}`} className="answer-viz__svg" aria-hidden="true">
+        {reports.map((r, i) => {
+          const v = r.corn_for_ethanol_mbu
+          const h = ((v - min) / range) * iH
+          const x = pad.l + i * step + (step - barW) / 2
+          const y = pad.t + iH - h
+          const isLatest = i === reports.length - 1
+          return (
+            <rect
+              key={r.report_date}
+              x={x} y={y} width={barW} height={h}
+              fill={isLatest ? '#4589ff' : '#3a4a63'}
+              rx="1.5"
+              className="viz-bar-anim"
+              style={{
+                transformOrigin: `${x + barW / 2}px ${pad.t + iH}px`,
+                animationDelay: `${i * 0.06}s`,
+              }}
+            />
+          )
+        })}
+        <text x={VW - pad.r + 8} y={pad.t + 6} fontSize="10.5" fill="#4589ff" fontWeight="600"
+              className="answer-viz--fadein" style={{ animationDelay: '0.4s' }}>
+          {Math.round(latestVal).toLocaleString()}
+        </text>
+        <text x={VW - pad.r + 8} y={pad.t + 18} fontSize="8.5" fill="#9aa5b1"
+              className="answer-viz--fadein" style={{ animationDelay: '0.45s' }}>
+          MBU corn / ethanol
+        </text>
+        <text x={VW - pad.r + 8} y={pad.t + 34} fontSize="9" fill={deltaColor} fontWeight="600"
+              className="answer-viz--fadein" style={{ animationDelay: '0.55s' }}>
+          {deltaLabel} vs prior
+        </text>
+        <text x={VW / 2} y={VH - 6} fontSize="8" fill="#57606a" textAnchor="middle"
+              className="answer-viz--fadein" style={{ animationDelay: '0.65s' }}>
+          WASDE · next {nextDate}
+        </text>
+      </svg>
+    </div>
+  )
+}
+
+// Approximate path length for a polyline (used by stroke-dasharray animation).
+function pointsPathLength(points) {
+  let total = 0
+  for (let i = 1; i < points.length; i++) {
+    const dx = points[i].x - points[i - 1].x
+    const dy = points[i].y - points[i - 1].y
+    total += Math.hypot(dx, dy)
+  }
+  return total
 }
