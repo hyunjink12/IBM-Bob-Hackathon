@@ -161,11 +161,16 @@ export function BriefingStrip({ briefing, apiClient }) {
   )
 }
 
-/** Three preset questions — label is what appears on the chip. */
+/**
+ * Preset question chips — label is what appears on the chip.
+ * Order: agency releases (EIA, WASDE) → positioning (COT, RIN) → synthesis (margin drivers).
+ */
 const PRESET_QUESTIONS = [
-  { id: 'eia_interpretation', label: 'Latest EIA release' },
-  { id: 'cot_interpretation', label: 'COT positioning' },
-  { id: 'margin_drivers',     label: 'Margin drivers' },
+  { id: 'eia_interpretation',   label: 'EIA weekly'      },
+  { id: 'wasde_interpretation', label: 'WASDE monthly'   },
+  { id: 'cot_interpretation',   label: 'COT positioning' },
+  { id: 'rin_market',           label: 'RIN market'      },
+  { id: 'margin_drivers',       label: 'Margin drivers'  },
 ]
 
 /** Three pulsing skeleton lines while Granite is thinking. */
