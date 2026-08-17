@@ -88,7 +88,7 @@ curl -X POST http://localhost:8000/api/admin/ingest \
   -H "Authorization: Bearer $APP_ADMIN_TOKEN"
 ```
 
-## Refreshing D6 RIN prices  ← MANUAL WEEKLY STEP
+## Refreshing D6 RIN prices  - MANUAL WEEKLY STEP
 
 **This is the only recurring manual step in the whole pipeline.** Everything else — Yahoo futures, EIA weekly, CFTC COT — refreshes automatically on ingest. D6 RIN prices come from a JavaScript-rendered EPA dashboard that has no clean API, so the workflow is: download CSV → overwrite the same file path → trigger ingest.
 
