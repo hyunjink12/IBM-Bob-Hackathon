@@ -8,7 +8,9 @@ from datetime import date, timedelta
 
 from app.clients.cftc_cot_client import CftcCotClient
 from app.clients.watsonx_client import WatsonxClient
+from app.managers.crush_margin_calculator import CrushMarginCalculator
 from app.managers.warning_backtester import RuleBacktestReport, WarningRuleBacktester
+from app.models.crush_model_config import CrushModelConfig
 from app.storage.duckdb_repository import DuckDbRepository
 
 _logger = logging.getLogger(__name__)
@@ -343,11 +345,16 @@ class BriefingManager:
         }
 
     def _margin_drivers_context(self) -> dict:
-        """Latest prices + margin decomposition to identify what's moving the spread."""
-        latest_margin = self._repository.fetch_latest_computed_margin()
-        latest_merged = self._repository.fetch_latest_merged_daily()
+        """
+        Latest prices, per-lever contribution, and 4-week trend for margin drivers.
 
-        # Pull 4 weeks of merged data for trend context.
+        Ships every revenue AND cost lever the calculator uses — ethanol, DDGS,
+        corn oil, D6 RIN, corn, nat gas, misc opex — so Granite can identify
+        the biggest current contributor and the biggest recent mover across
+        ALL lines, not just the CBOT-quoted ones.
+        """
+        latest_margin = self._repository.fetch_latest_computed_margin()
+
         cutoff = (latest_margin.obs_date - timedelta(days=28)) if latest_margin else None
         recent = self._repository.fetch_merged_daily(start_date=cutoff)
         price_trend: list[dict] = []
@@ -356,9 +363,33 @@ class BriefingManager:
                 "date": row.obs_date.isoformat(),
                 "corn_usd_per_bushel": row.corn_usd_per_bushel,
                 "ethanol_usd_per_gallon": row.ethanol_usd_per_gallon,
+                "ddgs_usd_per_short_ton": row.ddgs_usd_per_short_ton,
+                "corn_oil_usd_per_pound": row.corn_oil_usd_per_pound,
                 "nat_gas_usd_per_mmbtu": row.nat_gas_usd_per_mmbtu,
                 "rbob_usd_per_gallon": row.rbob_usd_per_gallon,
+                "d6_rin_usd_per_gallon": row.d6_rin_usd_per_gallon,
             })
+
+        # Per-lever $/bu contribution for the latest merged row — the ranked list
+        # of what's actually driving the current margin. Loading crush config
+        # locally keeps BriefingManager's constructor unchanged.
+        composition_payload: dict = {}
+        if recent:
+            latest_row = recent[-1]
+            calculator = CrushMarginCalculator(CrushModelConfig.default())
+            comp = calculator.decompose(latest_row)
+            if comp is not None:
+                composition_payload = {
+                    "ethanol_revenue_per_bushel": round(comp.ethanol_revenue, 4),
+                    "ddgs_revenue_per_bushel": round(comp.ddgs_revenue, 4),
+                    "corn_oil_revenue_per_bushel": round(comp.corn_oil_revenue, 4)
+                        if comp.corn_oil_included else None,
+                    "d6_rin_revenue_per_bushel": round(comp.rin_revenue, 4)
+                        if comp.rin_included else None,
+                    "corn_cost_per_bushel": round(comp.corn_cost, 4),
+                    "nat_gas_cost_per_bushel": round(comp.nat_gas_cost, 4),
+                    "misc_opex_per_bushel": round(comp.misc_opex_cost, 4),
+                }
 
         current_margin = {}
         if latest_margin:
@@ -371,11 +402,14 @@ class BriefingManager:
 
         return {
             "current_margin": current_margin,
+            "margin_composition_usd_per_bushel": composition_payload,
             "recent_price_trend": price_trend,
             "crush_model_yields": {
                 "ethanol_gallons_per_bushel": 2.8,
                 "ddgs_pounds_per_bushel": 17,
+                "corn_oil_pounds_per_bushel": 0.7,
                 "nat_gas_mmbtu_per_bushel": 0.0728,
+                "rin_per_gallon_ethanol": 1.0,
             },
         }
 
@@ -408,10 +442,14 @@ _QUESTION_SYSTEM_PROMPTS: dict[str, str] = {
     "margin_drivers": (
         "You are a commodity analyst explaining what is currently driving the ethanol crush margin "
         "to a trader. Write 3-4 sentences in plain prose. Rules: "
-        "identify which price leg (corn cost, ethanol revenue, or nat gas) has moved most in the "
-        "last 4 weeks based on the data provided; "
+        "consider ALL revenue and cost lines in `margin_composition_usd_per_bushel` — "
+        "ethanol revenue, DDGS, corn oil, D6 RIN revenue, corn cost, natural gas cost, misc opex — "
+        "not just corn and ethanol; "
+        "identify the single largest contributor to the current margin (revenue or cost side) "
+        "and cite its $/bu value; "
+        "identify which price in `recent_price_trend` moved most over the last 4 weeks and by how much; "
         "explain whether the current margin is wide or narrow relative to history (use the signal label); "
-        "name the single biggest near-term risk to the margin (cost-side or revenue-side); "
+        "name the single biggest near-term risk (which lever, in which direction); "
         "no bullet points, no markdown, no invented numbers. Maximum 4 sentences."
     ),
 }
