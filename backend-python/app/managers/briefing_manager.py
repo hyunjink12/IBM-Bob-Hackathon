@@ -348,48 +348,76 @@ class BriefingManager:
         """
         Latest prices, per-lever contribution, and 4-week trend for margin drivers.
 
-        Ships every revenue AND cost lever the calculator uses — ethanol, DDGS,
-        corn oil, D6 RIN, corn, nat gas, misc opex — so Granite can identify
-        the biggest current contributor and the biggest recent mover across
-        ALL lines, not just the CBOT-quoted ones.
+        Ships pre-ranked lists so Granite doesn't have to sort or arithmetic
+        across seven line items in its head — a class of task LLMs get wrong.
+        `ranked_contributions_abs` and `ranked_price_moves_pct` are both
+        largest-first; Granite is instructed to narrate `[0]` verbatim.
         """
         latest_margin = self._repository.fetch_latest_computed_margin()
 
         cutoff = (latest_margin.obs_date - timedelta(days=28)) if latest_margin else None
         recent = self._repository.fetch_merged_daily(start_date=cutoff)
-        price_trend: list[dict] = []
-        for row in recent[-5:]:
-            price_trend.append({
-                "date": row.obs_date.isoformat(),
-                "corn_usd_per_bushel": row.corn_usd_per_bushel,
-                "ethanol_usd_per_gallon": row.ethanol_usd_per_gallon,
-                "ddgs_usd_per_short_ton": row.ddgs_usd_per_short_ton,
-                "corn_oil_usd_per_pound": row.corn_oil_usd_per_pound,
-                "nat_gas_usd_per_mmbtu": row.nat_gas_usd_per_mmbtu,
-                "rbob_usd_per_gallon": row.rbob_usd_per_gallon,
-                "d6_rin_usd_per_gallon": row.d6_rin_usd_per_gallon,
-            })
 
-        # Per-lever $/bu contribution for the latest merged row — the ranked list
-        # of what's actually driving the current margin. Loading crush config
-        # locally keeps BriefingManager's constructor unchanged.
-        composition_payload: dict = {}
+        # ---- Pre-ranked 4-week price moves (largest % change first) ----
+        price_moves: list[dict] = []
+        if len(recent) >= 2:
+            first = recent[0]
+            last = recent[-1]
+            price_fields = [
+                ("corn", "corn_usd_per_bushel", "$/bu"),
+                ("ethanol", "ethanol_usd_per_gallon", "$/gal"),
+                ("ddgs", "ddgs_usd_per_short_ton", "$/short ton"),
+                ("corn_oil", "corn_oil_usd_per_pound", "$/lb"),
+                ("nat_gas", "nat_gas_usd_per_mmbtu", "$/MMBtu"),
+                ("rbob", "rbob_usd_per_gallon", "$/gal"),
+                ("d6_rin", "d6_rin_usd_per_gallon", "$/gal"),
+            ]
+            for label, field, unit in price_fields:
+                v0 = getattr(first, field, None)
+                v1 = getattr(last, field, None)
+                if v0 is None or v1 is None or v0 == 0:
+                    continue
+                price_moves.append({
+                    "leg": label,
+                    "unit": unit,
+                    "value_4w_ago": round(v0, 4),
+                    "value_now": round(v1, 4),
+                    "abs_change": round(v1 - v0, 4),
+                    "pct_change": round((v1 - v0) / abs(v0), 4),
+                    "direction": "up" if v1 > v0 else ("down" if v1 < v0 else "flat"),
+                })
+            price_moves.sort(key=lambda m: abs(m["pct_change"]), reverse=True)
+
+        # ---- Pre-ranked current-margin contributions (largest |$/bu| first) ----
+        composition_by_label: dict = {}
+        ranked_contributions: list[dict] = []
         if recent:
             latest_row = recent[-1]
             calculator = CrushMarginCalculator(CrushModelConfig.default())
             comp = calculator.decompose(latest_row)
             if comp is not None:
-                composition_payload = {
-                    "ethanol_revenue_per_bushel": round(comp.ethanol_revenue, 4),
-                    "ddgs_revenue_per_bushel": round(comp.ddgs_revenue, 4),
-                    "corn_oil_revenue_per_bushel": round(comp.corn_oil_revenue, 4)
-                        if comp.corn_oil_included else None,
-                    "d6_rin_revenue_per_bushel": round(comp.rin_revenue, 4)
-                        if comp.rin_included else None,
-                    "corn_cost_per_bushel": round(comp.corn_cost, 4),
-                    "nat_gas_cost_per_bushel": round(comp.nat_gas_cost, 4),
-                    "misc_opex_per_bushel": round(comp.misc_opex_cost, 4),
-                }
+                candidates = [
+                    ("Ethanol revenue",  comp.ethanol_revenue,  "revenue"),
+                    ("DDGS revenue",     comp.ddgs_revenue,     "revenue"),
+                ]
+                if comp.corn_oil_included:
+                    candidates.append(("Corn oil revenue", comp.corn_oil_revenue, "revenue"))
+                if comp.rin_included:
+                    candidates.append(("D6 RIN revenue", comp.rin_revenue, "revenue"))
+                candidates += [
+                    ("Corn cost",       comp.corn_cost,     "cost"),
+                    ("Natural gas cost", comp.nat_gas_cost, "cost"),
+                    ("Misc opex",       comp.misc_opex_cost, "cost"),
+                ]
+                composition_by_label = {label: round(v, 4) for label, v, _ in candidates}
+                ranked_contributions = sorted(
+                    [
+                        {"lever": label, "kind": kind, "value_per_bushel": round(v, 4)}
+                        for label, v, kind in candidates
+                    ],
+                    key=lambda c: abs(c["value_per_bushel"]),
+                    reverse=True,
+                )
 
         current_margin = {}
         if latest_margin:
@@ -402,15 +430,9 @@ class BriefingManager:
 
         return {
             "current_margin": current_margin,
-            "margin_composition_usd_per_bushel": composition_payload,
-            "recent_price_trend": price_trend,
-            "crush_model_yields": {
-                "ethanol_gallons_per_bushel": 2.8,
-                "ddgs_pounds_per_bushel": 17,
-                "corn_oil_pounds_per_bushel": 0.7,
-                "nat_gas_mmbtu_per_bushel": 0.0728,
-                "rin_per_gallon_ethanol": 1.0,
-            },
+            "ranked_contributions_abs": ranked_contributions,
+            "margin_composition_by_label": composition_by_label,
+            "ranked_price_moves_pct": price_moves,
         }
 
 
@@ -440,17 +462,18 @@ _QUESTION_SYSTEM_PROMPTS: dict[str, str] = {
         "No bullet points. No markdown. No invented numbers. Maximum 4 sentences."
     ),
     "margin_drivers": (
-        "You are a commodity analyst explaining what is currently driving the ethanol crush margin "
-        "to a trader. Write 3-4 sentences in plain prose. Rules: "
-        "consider ALL revenue and cost lines in `margin_composition_usd_per_bushel` — "
-        "ethanol revenue, DDGS, corn oil, D6 RIN revenue, corn cost, natural gas cost, misc opex — "
-        "not just corn and ethanol; "
-        "identify the single largest contributor to the current margin (revenue or cost side) "
-        "and cite its $/bu value; "
-        "identify which price in `recent_price_trend` moved most over the last 4 weeks and by how much; "
-        "explain whether the current margin is wide or narrow relative to history (use the signal label); "
-        "name the single biggest near-term risk (which lever, in which direction); "
-        "no bullet points, no markdown, no invented numbers. Maximum 4 sentences."
+        "You are a commodity analyst explaining what is driving the ethanol crush margin. "
+        "Write 3-4 sentences in plain prose. Follow these rules exactly:\n"
+        "1. The biggest current contributor to the margin is `ranked_contributions_abs[0]` — "
+        "cite its lever name and $/bu value verbatim. Do NOT pick a different line item.\n"
+        "2. The biggest 4-week price move is `ranked_price_moves_pct[0]` — cite its leg, "
+        "the direction (up/down), and the pct_change. Do NOT invent a different mover.\n"
+        "3. Costs (corn, nat gas, misc opex) are stored as negative numbers. A price DROP "
+        "in a cost is FAVORABLE for the margin; a price RISE in a cost is UNFAVORABLE.\n"
+        "4. State whether the margin is wide or narrow relative to history using `current_margin.signal_label`.\n"
+        "5. Name the single biggest near-term risk — pick the lever most likely to move against "
+        "the margin, and say which direction hurts.\n"
+        "No bullet points, no markdown, no invented numbers. Maximum 4 sentences."
     ),
 }
 
