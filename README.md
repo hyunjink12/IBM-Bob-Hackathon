@@ -88,18 +88,56 @@ curl -X POST http://localhost:8000/api/admin/ingest \
   -H "Authorization: Bearer $APP_ADMIN_TOKEN"
 ```
 
-## Refreshing D6 RIN prices
+## Refreshing D6 RIN prices  ← MANUAL WEEKLY STEP
 
-The dashboard's margin math includes D6 RIN revenue (typically $1–2/bu at current prices — a real chunk of plant P&L). Prices come from EPA's public [RIN Trades and Price Information dashboard](https://www.epa.gov/fuels-registration-reporting-and-compliance-help/rin-trades-and-price-information) via a manual weekly refresh:
+**This is the only recurring manual step in the whole pipeline.** Everything else — Yahoo futures, EIA weekly, CFTC COT — refreshes automatically on ingest. D6 RIN prices come from a JavaScript-rendered EPA dashboard that has no clean API, so the workflow is: download CSV → overwrite the same file path → trigger ingest.
 
-1. Open the EPA page linked above and select the **RIN Price Data** view from the dropdown.
-2. Multi-select all **Transfer Years** (click first year, Shift-click last year).
-3. Keep **Fuel (D Code)** set to `D6`.
-4. Click **Export Table** — downloads a CSV.
-5. Overwrite `backend-python/data/epa/rin_prices.csv` with the fresh download (keep the same filename).
-6. Trigger an ingest (`curl -X POST http://localhost:8000/api/admin/ingest -H "Authorization: Bearer $APP_ADMIN_TOKEN"` or restart the backend). The `EpaRinFileClient` parses the file, keeps only current-vintage Unverified D6 rows, and upserts them.
+D6 RIN revenue is a first-class margin driver — at current prices it's often the largest single revenue line in the crush margin, larger than the ethanol sale itself. Skipping this refresh means the app forward-fills a stale RIN price and the margin drifts from reality.
 
-No network call — this is a file-drop pattern. Cadence is up to you; EPA publishes new prints weekly. If the CSV is missing, the RIN revenue line drops out of the margin composition and the RIN card shows a dash, everything else keeps working.
+**Weekly workflow:**
+
+1. Open [EPA's RIN Trades and Price Information dashboard](https://www.epa.gov/fuels-registration-reporting-and-compliance-help/rin-trades-and-price-information).
+2. Select the **RIN Price Data** view from the dropdown.
+3. Multi-select all **Transfer Years** (click first year, Shift-click last year).
+4. Keep **Fuel (D Code)** set to `D6`.
+5. Click **Export Table** — downloads a CSV.
+6. **Overwrite** `backend-python/data/epa/rin_prices.csv` with the fresh download. **Keep the same filename** — the app watches that specific path.
+7. Trigger ingest so the app re-parses the file:
+   ```bash
+   curl -X POST http://localhost:8000/api/admin/ingest -H "Authorization: Bearer $APP_ADMIN_TOKEN"
+   ```
+   Or restart the backend — startup runs the pipeline automatically.
+
+The `EpaRinFileClient` filters the CSV down to canonical rows (RIN Year == Transfer Year AND QAP Service Type == "Unverified") and upserts them tagged `source="epa_emts"`. Old EPA rows are replaced; existing Yahoo/EIA data is untouched. If the CSV is missing entirely, the RIN revenue line drops out of the margin composition and the RIN card shows `—`; everything else keeps working.
+
+## Crush margin formulas
+
+The dashboard displays two related but different numbers. Know which one you're looking at.
+
+**Full plant crush margin (per bushel of corn)** — what the dry-mill actually earns:
+
+```
+margin_per_bushel =
+    (ethanol_$/gal × 2.8)              # ethanol revenue
+  + (DDGS_$/short_ton × 17 ÷ 2000)     # DDGS coproduct revenue
+  + (corn_oil_$/lb × 0.7)              # corn oil coproduct revenue
+  + (d6_rin_$/gal × 2.8)               # D6 RIN revenue (1 RIN per gal ethanol)
+  − corn_$/bu                          # feedstock cost
+  − (nat_gas_$/MMBtu × 0.0728)         # process energy cost
+  − 0.35                               # misc opex placeholder
+
+margin_per_gallon = margin_per_bushel ÷ 2.8
+```
+
+Constants live in [`config/crush_model.json`](config/crush_model.json) and follow the Iowa State CARD dry-mill archetype. Coproduct and RIN lines drop out cleanly (revenue = 0) when the underlying price is missing on the merged daily row.
+
+**CME-standard ethanol crush spread (physical only)** — the exchange-listed input dislocation gauge:
+
+```
+crush_spread_$/bu = (ethanol_$/gal × 2.8) − corn_$/bu
+```
+
+No coproducts, no costs, no RIN. Matches CBOT `2.8 × EH − ZC`. This is the number a paper trader hedges; it's not the plant's P&L.
 
 ## Tests
 
@@ -122,6 +160,7 @@ cd backend-python
 | `config/wasde_schedule.json` | USDA-published WASDE release dates (see caveat below) |
 | `client-react-vite/src/config/dashboard_config.js` | Z-score window, chart range, tooltips |
 | `backend-python/.env` | Secrets only (EIA key, admin token, watsonx credentials) |
+| `backend-python/data/epa/rin_prices.csv` | EPA D6 RIN weekly prices — **overwrite weekly** (see "Refreshing D6 RIN prices" above) |
 
 ## Data caveats
 
