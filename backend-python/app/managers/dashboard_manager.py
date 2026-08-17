@@ -17,6 +17,7 @@ from app.managers.warning_backtester import (
 )
 from app.managers.series_merge_manager import (
     SERIES_CORN,
+    SERIES_D6_RIN,
     SERIES_DDGS,
     SERIES_ETHANOL,
     SERIES_ETHANOL_PRODUCTION,
@@ -110,6 +111,14 @@ class DashboardManager:
             "Mb/d",
             "EIA weekly ethanol production",
             "Ethanol Production",
+        ),
+        (
+            "d6_rin",
+            SERIES_D6_RIN,
+            "d6_rin_usd_per_gallon",
+            "$/gal",
+            "EPA D6 corn ethanol RIN (weekly)",
+            "D6 RIN Price",
         ),
     )
 
@@ -230,6 +239,12 @@ class DashboardManager:
                     "kind": "revenue",
                     "value_per_bushel": comp.corn_oil_revenue,
                     "included": comp.corn_oil_included,
+                },
+                {
+                    "label": "D6 RIN revenue",
+                    "kind": "revenue",
+                    "value_per_bushel": comp.rin_revenue,
+                    "included": comp.rin_included,
                 },
                 {"label": "Corn cost", "kind": "cost", "value_per_bushel": comp.corn_cost},
                 {"label": "Natural gas cost", "kind": "cost", "value_per_bushel": comp.nat_gas_cost},
