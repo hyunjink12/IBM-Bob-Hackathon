@@ -11,8 +11,8 @@ import httpx
 _logger = logging.getLogger(__name__)
 
 _IAM_TOKEN_URL = "https://iam.cloud.ibm.com/identity/token"
-_GENERATION_PATH = "/ml/v1/text/generation"
-_GENERATION_API_VERSION = "2024-05-01"
+_CHAT_PATH = "/ml/v1/text/chat"
+_CHAT_API_VERSION = "2024-05-01"
 
 
 @dataclass
@@ -56,9 +56,24 @@ class WatsonxClient:
         """True when both the API key and project ID are present."""
         return bool(self._api_key and self._project_id)
 
-    def generate(self, prompt: str, *, max_new_tokens: int = 350, temperature: float = 0.2) -> str:
+    def generate(
+        self,
+        prompt: str,
+        *,
+        system: str | None = None,
+        max_new_tokens: int = 350,
+        temperature: float = 0.2,
+    ) -> str:
         """
-        Call the Granite text generation endpoint and return the generated text.
+        Call the Granite chat endpoint and return the assistant reply.
+
+        ``system`` sets the system-role message; ``prompt`` is the user turn.
+        The older ``/text/generation`` endpoint is deprecated and unreliable
+        for Granite 4 models (it EOSes without a proper chat template), so we
+        target ``/text/chat`` and pass explicit role messages. Callers that
+        already stitched a system-instruction into their prompt can keep
+        passing a single string — the whole thing becomes the user message —
+        but splitting yields better output.
 
         Raises ``RuntimeError`` if the client is not configured or the API call fails.
         """
@@ -66,17 +81,19 @@ class WatsonxClient:
             raise RuntimeError("WatsonxClient is not configured: set api_key and project_id")
 
         bearer = self._get_bearer_token()
-        url = f"{self._base_url}{_GENERATION_PATH}?version={_GENERATION_API_VERSION}"
+        url = f"{self._base_url}{_CHAT_PATH}?version={_CHAT_API_VERSION}"
+
+        messages: list[dict[str, str]] = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+
         payload = {
             "model_id": self._model_id,
             "project_id": self._project_id,
-            "input": prompt,
-            "parameters": {
-                "decoding_method": "greedy",
-                "max_new_tokens": max_new_tokens,
-                "temperature": temperature,
-                "repetition_penalty": 1.05,
-            },
+            "messages": messages,
+            "max_tokens": max_new_tokens,
+            "temperature": temperature,
         }
         try:
             response = httpx.post(
@@ -90,10 +107,11 @@ class WatsonxClient:
             raise RuntimeError(f"watsonx.ai API error {exc.response.status_code}: {exc.response.text}") from exc
 
         data = response.json()
-        results = data.get("results", [])
-        if not results:
-            raise RuntimeError(f"watsonx.ai returned no results: {data}")
-        return results[0].get("generated_text", "").strip()
+        choices = data.get("choices", [])
+        if not choices:
+            raise RuntimeError(f"watsonx.ai returned no choices: {data}")
+        message = choices[0].get("message", {})
+        return (message.get("content") or "").strip()
 
     # ------------------------------------------------------------------
     # IAM token exchange
