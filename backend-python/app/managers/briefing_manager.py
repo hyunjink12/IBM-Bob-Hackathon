@@ -25,15 +25,10 @@ for an ethanol crush trader. Write 3-5 sentences in plain, direct prose. Rules:
 - Maximum 5 sentences."""
 
 
-def _build_prompt(context: dict) -> str:
-    """Serialise the structured context into a single prompt string for Granite."""
+def _build_user_prompt(context: dict) -> str:
+    """Serialise the structured context into the user-turn content for Granite chat."""
     context_json = json.dumps(context, default=str, indent=2)
-    return f"""{_SYSTEM_INSTRUCTIONS}
-
-MARKET CONTEXT (JSON):
-{context_json}
-
-BRIEFING:"""
+    return f"MARKET CONTEXT (JSON):\n{context_json}\n\nWrite the briefing now."
 
 
 class BriefingManager:
@@ -95,7 +90,10 @@ class BriefingManager:
         # Build context and call Granite.
         context = self._build_context()
         try:
-            text = self._watsonx.generate(_build_prompt(context))
+            text = self._watsonx.generate(
+                _build_user_prompt(context),
+                system=_SYSTEM_INSTRUCTIONS,
+            )
         except Exception as exc:
             _logger.warning("watsonx.ai briefing generation failed: %s", exc)
             return {
@@ -232,10 +230,14 @@ class BriefingManager:
         context = context_fn()
 
         context_json = json.dumps(context, default=str, indent=2)
-        prompt = f"{system_prompt}\n\nDATA (JSON):\n{context_json}\n\nANSWER:"
+        user_prompt = f"DATA (JSON):\n{context_json}\n\nAnswer the question now."
 
         try:
-            answer = self._watsonx.generate(prompt, max_new_tokens=280)
+            answer = self._watsonx.generate(
+                user_prompt,
+                system=system_prompt,
+                max_new_tokens=280,
+            )
         except Exception as exc:
             _logger.warning("watsonx.ai preset question '%s' failed: %s", question_id, exc)
             return {
