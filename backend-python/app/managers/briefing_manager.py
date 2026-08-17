@@ -435,6 +435,30 @@ class BriefingManager:
 
         next_release = ReleaseScheduleManager().next_wasde_release()
 
+        # Pre-compute the crush-spread implication so Granite doesn't have to
+        # chain "revision → basis direction → spread direction" itself — a
+        # multi-step signed reasoning task LLMs consistently invert.
+        # Rule: higher WASDE ethanol demand → firmer corn basis → COMPRESSES
+        # the physical crush spread. Lower → softer basis → WIDENS.
+        if delta_vs_prior is None or abs(delta_vs_prior) < 5:
+            crush_implication = "neutral"
+            crush_implication_prose = (
+                "The revision is small and unlikely to move the physical crush spread meaningfully "
+                "over the next 30 days."
+            )
+        elif delta_vs_prior > 0:
+            crush_implication = "compresses"
+            crush_implication_prose = (
+                "This upward revision implies firmer nearby corn demand, which typically firms "
+                "the corn basis and COMPRESSES the physical crush spread over the next 30 days."
+            )
+        else:
+            crush_implication = "widens"
+            crush_implication_prose = (
+                "This downward revision implies softer nearby corn demand, which typically softens "
+                "the corn basis and WIDENS the physical crush spread over the next 30 days."
+            )
+
         return {
             "wasde": {
                 "latest_report_date": latest.obs_date.isoformat(),
@@ -444,6 +468,8 @@ class BriefingManager:
                 "recent_6_reports": trend,
                 "next_release_date": next_release.released_at_et.date().isoformat(),
                 "next_release_is_approximate": next_release.is_approximate,
+                "crush_spread_implication": crush_implication,
+                "crush_spread_implication_prose": crush_implication_prose,
             },
         }
 
@@ -596,17 +622,13 @@ _QUESTION_SYSTEM_PROMPTS: dict[str, str] = {
     "wasde_interpretation": (
         "You are a commodity analyst interpreting the latest USDA WASDE corn-for-ethanol figure. "
         "Write 3-4 sentences in plain prose. Follow these rules exactly:\n"
-        "1. Cite `corn_for_ethanol_mbu` and `delta_vs_prior_mbu` verbatim. State the direction (up/down) "
-        "and magnitude of the month-over-month revision.\n"
-        "2. TREND RULE: You MUST cite `revision_direction_last_6_reports` verbatim. Do NOT invent a trend "
-        "that contradicts it. If it says 'up', 6-report trend is UP; 'down' is DOWN; 'flat' is FLAT. "
-        "Do not describe the trend using a word other than the one in the field.\n"
-        "3. DIRECTIONAL RULE: Higher WASDE corn-for-ethanol = MORE demand for corn = firmer nearby corn "
-        "basis = COMPRESSES the physical crush spread (because corn cost rises). Lower WASDE = LESS "
-        "demand = softer basis = WIDER crush spread. Do not flip these.\n"
-        "4. Cite `next_release_date` so the trader knows when to expect the next print.\n"
-        "5. Close with the implication for the CORN SIDE of the crush margin over the next 30 days, "
-        "consistent with the directional rule above.\n"
+        "1. Cite `corn_for_ethanol_mbu` and `delta_vs_prior_mbu` verbatim. State direction and magnitude.\n"
+        "2. Cite `revision_direction_last_6_reports` verbatim — 'up', 'down', or 'flat'. Do NOT invent a "
+        "different trend.\n"
+        "3. Cite `next_release_date`.\n"
+        "4. For the CRUSH SPREAD IMPLICATION, use `crush_spread_implication_prose` verbatim or paraphrase "
+        "it faithfully. Do NOT invent a different directional conclusion. The server has already computed "
+        "the correct direction — you narrate, do not reason.\n"
         "No bullet points, no markdown, no invented numbers. Maximum 4 sentences."
     ),
     "margin_drivers": (

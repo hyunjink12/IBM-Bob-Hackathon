@@ -380,7 +380,7 @@ function RinSparkline({ data }) {
   if (prints.length < 2) return null
 
   const VH = 90
-  const pad = { t: 12, b: 22, l: 6, r: 60 }
+  const pad = { t: 12, b: 22, l: 6, r: 76 }
   const iW = VW - pad.l - pad.r
   const iH = VH - pad.t - pad.b
 
@@ -447,7 +447,7 @@ function WasdeTrendBars({ data }) {
   if (reports.length < 2) return null
 
   const VH = 96
-  const pad = { t: 10, b: 22, l: 6, r: 72 }
+  const pad = { t: 10, b: 22, l: 6, r: 102 }
   const iW = VW - pad.l - pad.r
   const iH = VH - pad.t - pad.b
 
@@ -462,7 +462,7 @@ function WasdeTrendBars({ data }) {
   const delta = wasde?.delta_vs_prior_mbu
   const deltaColor = delta == null ? '#9aa5b1' : delta > 0 ? '#5cba82' : delta < 0 ? '#d47b7b' : '#9aa5b1'
   const deltaSign = delta == null ? '' : delta > 0 ? '+' : ''
-  const deltaLabel = delta == null ? '—' : `${deltaSign}${Math.round(delta)} MBU`
+  const deltaLabel = delta == null ? '—' : `${deltaSign}${Math.round(delta)} MBU MoM`
   const nextDate = wasde?.next_release_date?.slice(5) ?? '—'
 
   return (
@@ -494,11 +494,11 @@ function WasdeTrendBars({ data }) {
         </text>
         <text x={VW - pad.r + 8} y={pad.t + 18} fontSize="8.5" fill="#9aa5b1"
               className="answer-viz--fadein" style={{ animationDelay: '0.45s' }}>
-          MBU corn / ethanol
+          MBU corn-for-ethanol
         </text>
         <text x={VW - pad.r + 8} y={pad.t + 34} fontSize="9" fill={deltaColor} fontWeight="600"
               className="answer-viz--fadein" style={{ animationDelay: '0.55s' }}>
-          {deltaLabel} vs prior
+          {deltaLabel}
         </text>
         <text x={VW / 2} y={VH - 6} fontSize="8" fill="#57606a" textAnchor="middle"
               className="answer-viz--fadein" style={{ animationDelay: '0.65s' }}>
