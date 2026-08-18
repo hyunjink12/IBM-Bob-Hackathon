@@ -84,12 +84,18 @@ export function CrushMarginPanel({ margins, config, eiaReleases }) {
 
       {current && (
         <div className="hero-metrics">
-          <MetricTooltip label="Margin / bu" tooltip={config.tooltips.margin_per_bushel}>
+          <MetricTooltip
+            label="Plant margin / bu"
+            tooltip="Plant operating margin per bushel of corn: ethanol + coproduct revenue minus corn + gas + opex costs. EXCLUDES the D6 RIN regulatory-value equivalent — that is shown separately below."
+          >
             <div className="hero-metric">
               <span className="hero-metric__value">${current.margin_per_bushel.toFixed(3)}</span>
             </div>
           </MetricTooltip>
-          <MetricTooltip label="Margin / gal" tooltip={config.tooltips.margin_per_gallon}>
+          <MetricTooltip
+            label="Plant margin / gal"
+            tooltip="Plant operating margin expressed per gallon of ethanol produced (per-bushel margin ÷ 2.8 gal/bu). Physical crush P&L only; RIN value is separate."
+          >
             <div className="hero-metric">
               <span className="hero-metric__value">${current.margin_per_gallon.toFixed(3)}</span>
             </div>
@@ -110,7 +116,7 @@ export function CrushMarginPanel({ margins, config, eiaReleases }) {
       )}
 
       <TimeSeriesChart
-        title="Margin per bushel"
+        title="Plant operating margin per bushel"
         series={margins.series}
         yKeys={['margin_per_bushel']}
         labels={['$/bu']}
