@@ -512,24 +512,24 @@ class BriefingManager:
         # chain "revision → basis direction → spread direction" itself — a
         # multi-step signed reasoning task LLMs consistently invert.
         # Rule: higher WASDE ethanol demand → firmer corn basis → COMPRESSES
-        # the physical crush spread. Lower → softer basis → WIDENS.
+        # the simple ethanol/corn spread. Lower → softer basis → WIDENS.
         if delta_vs_prior is None or abs(delta_vs_prior) < 5:
             crush_implication = "neutral"
             crush_implication_prose = (
-                "The revision is small and unlikely to move the physical crush spread meaningfully "
+                "The revision is small and unlikely to move the simple ethanol/corn spread meaningfully "
                 "over the next 30 days."
             )
         elif delta_vs_prior > 0:
             crush_implication = "compresses"
             crush_implication_prose = (
                 "This upward revision implies firmer nearby corn demand, which typically firms "
-                "the corn basis and COMPRESSES the physical crush spread over the next 30 days."
+                "the corn basis and COMPRESSES the simple ethanol/corn spread over the next 30 days."
             )
         else:
             crush_implication = "widens"
             crush_implication_prose = (
                 "This downward revision implies softer nearby corn demand, which typically softens "
-                "the corn basis and WIDENS the physical crush spread over the next 30 days."
+                "the corn basis and WIDENS the simple ethanol/corn spread over the next 30 days."
             )
 
         return {
@@ -598,14 +598,16 @@ class BriefingManager:
             calculator = CrushMarginCalculator(CrushModelConfig.default())
             comp = calculator.decompose(latest_row)
             if comp is not None:
+                # PHYSICAL drivers only — D6 RIN is a compliance-market value,
+                # NOT a producer revenue line, so it's tracked separately below
+                # and excluded from the "biggest physical driver" ranking Granite
+                # cites in its closing sentence.
                 candidates = [
                     ("Ethanol revenue",  comp.ethanol_revenue,  "revenue"),
                     ("DDGS revenue",     comp.ddgs_revenue,     "revenue"),
                 ]
                 if comp.corn_oil_included:
                     candidates.append(("Corn oil revenue", comp.corn_oil_revenue, "revenue"))
-                if comp.rin_included:
-                    candidates.append(("D6 RIN revenue", comp.rin_revenue, "revenue"))
                 candidates += [
                     ("Corn cost",       comp.corn_cost,     "cost"),
                     ("Natural gas cost", comp.nat_gas_cost, "cost"),
@@ -620,6 +622,11 @@ class BriefingManager:
                     key=lambda c: abs(c["value_per_bushel"]),
                     reverse=True,
                 )
+                # Expose the D6 RIN value on its own so prompts can reference
+                # the regulatory-value scale without adding it to the physical
+                # driver ranking (which would misframe it as producer revenue).
+                if comp.rin_included:
+                    composition_by_label["D6 RIN Value (regulatory)"] = round(comp.d6_rin_value, 4)
 
         current_margin = {}
         if latest_margin:
@@ -682,14 +689,18 @@ _QUESTION_SYSTEM_PROMPTS: dict[str, str] = {
         "Write 3-4 sentences in plain prose. Follow these rules exactly:\n"
         "1. Open with the current D6 RIN price and its `percentile_full_history` — cite both verbatim.\n"
         "2. State the WoW change from `wow_pct_change` (direction and magnitude).\n"
-        "3. Cite `rin_share_of_current_margin_pct`. If above 40%, note plant economics are heavily "
-        "policy-dependent at this level.\n"
-        "4. DIRECTIONAL RULE FOR THE CLOSING SENTENCE: D6 RIN is a REVENUE line for ethanol producers. "
-        "A HIGHER RIN price = MORE producer revenue = FATTER margin. A LOWER RIN price = LESS producer "
-        "revenue = THINNER margin. If closing on what a reversion to `history_median` would mean, and the "
-        "current price is ABOVE the median, that reversion is UNFAVORABLE for producers (would strip "
-        "revenue). If the current price is BELOW the median, reversion would be FAVORABLE. Do not flip "
-        "these directions.\n"
+        "3. Cite `rin_share_of_current_margin_pct` as the scale of the D6 REGULATORY VALUE relative "
+        "to the plant's physical operating margin. Frame it as a COMPLIANCE-VALUE comparison, NOT as "
+        "producer revenue capture. If above 40%, note that the compliance-market value attached to the "
+        "ethanol gallon is currently large relative to physical plant P&L, making the sector's aggregate "
+        "economics sensitive to EPA policy (SRE grants, RVO decisions, Set Rule).\n"
+        "4. DIRECTIONAL RULE FOR THE CLOSING SENTENCE: The D6 RIN price sets the market value of the "
+        "compliance credit attached to each gallon of ethanol produced. It is NOT assumed to be "
+        "dollar-for-dollar producer revenue — producer capture depends on pass-through economics between "
+        "producers and obligated parties (refiners/importers), which this dashboard does not model. "
+        "Discuss RIN moves in terms of SECTOR-LEVEL compliance value and POLICY signal, not direct "
+        "plant P&L. Avoid the words 'revenue', 'plant captures', 'producer pockets', or 'margin' when "
+        "referring to the RIN price itself.\n"
         "No bullet points, no markdown, no invented numbers. Maximum 4 sentences."
     ),
     "wasde_interpretation": (
