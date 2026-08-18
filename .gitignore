@@ -62,3 +62,4 @@ Desktop.ini
 
 # --- Docker (local overrides only) ---
 docker-compose.override.yml
+RIN_INSIGHT_HANDOFF.md

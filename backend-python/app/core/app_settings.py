@@ -26,7 +26,12 @@ class AppSettings(BaseSettings):
     api_version: str = "0.1.0"
     eia_api_key: str = ""
     admin_token: str = ""
-    duckdb_path: str = "data/ethanol_dashboard.duckdb"
+    # Root for persistent state (DuckDB file + EPA CSV drop). Empty → resolve to
+    # `backend-python/data`. On Railway, set APP_DATA_DIR to the volume mount
+    # (e.g. `/data`) so the DB + RIN CSVs survive redeploys.
+    data_dir: str = ""
+    duckdb_path: str = ""
+    epa_rin_csv_path: str = ""
     crush_model_path: str = "../config/crush_model.json"
     watsonx_api_key: str = ""
     watsonx_project_id: str = ""
