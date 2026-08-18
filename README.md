@@ -14,6 +14,7 @@ IBM Bob (IBM's AI coding agent) built this dashboard throughout the hackathon; t
   2. In **Variables**, set `APP_EIA_API_KEY`, `APP_ADMIN_TOKEN`, `APP_WATSONX_API_KEY`, `APP_WATSONX_PROJECT_ID`. `APP_DATA_DIR=/data` is already baked into the Dockerfile.
   3. First deploy auto-seeds `/data/epa/` from the vintage-tagged CSVs baked into the image (`rin_prices_2026.csv` etc.) — no manual upload needed. To refresh mid-year, `railway ssh` into the service and overwrite `/data/epa/rin_prices_2026.csv`. The DuckDB file lives beside it at `/data/ethanol_dashboard.duckdb` and persists across redeploys.
 - Overrides: `APP_DUCKDB_PATH` and `APP_EPA_RIN_CSV_PATH` still work if you want to relocate individual files.
+- Gave up on Railway CLI
 
 ## Run locally
 
