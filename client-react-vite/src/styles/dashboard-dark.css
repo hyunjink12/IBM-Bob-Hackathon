@@ -44,11 +44,11 @@
 /* names as the dark defaults above so no consumer needs to change.    */
 /* ------------------------------------------------------------------ */
 :root[data-theme="light"] {
-  --bg-page: #f7f5ef;         /* eggwhite — warmer than pure white */
-  --bg-panel: #ffffff;        /* pure white cards on eggwhite = subtle shading */
-  --bg-card: #ffffff;
-  --bg-inset: #f0eee7;
-  --bg-hover: #efece4;
+  --bg-page: #ffffff;         /* pure white page */
+  --bg-panel: #faf7ef;        /* cream white cards + ticker tape sit ON top of white */
+  --bg-card: #faf7ef;
+  --bg-inset: #faf7ef;
+  --bg-hover: #f2eee2;
 
   --border-subtle: #e0dcd0;
   --border-strong: #c8c3b3;
@@ -229,8 +229,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 2.4rem;
+  height: 2.4rem;
   padding: 0;
   color: var(--text-secondary);
   cursor: pointer;
