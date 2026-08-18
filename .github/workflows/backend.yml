@@ -1,0 +1,55 @@
+name: Backend tests
+
+# Runs the FastAPI backend's pytest suite on every push and PR touching the
+# backend, config, or this workflow. Config lives at repo root and the crush
+# margin calculator reads it, so config/ changes also trigger a run.
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "backend-python/**"
+      - "config/**"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "backend-python/**"
+      - "config/**"
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend-python
+
+    strategy:
+      matrix:
+        # Matches the Dockerfile's python:3.12-slim base and local .venv (3.13).
+        # Locking both so a Python-version-specific regression surfaces here
+        # rather than in Railway's build logs.
+        python-version: ["3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+          cache-dependency-path: backend-python/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run pytest
+        # APP_CRUSH_MODEL_PATH points at the repo-root config so
+        # CrushModelConfig.default() resolves without relying on parents[3]
+        # (which walks past the checkout root on some runner layouts).
+        env:
+          APP_CRUSH_MODEL_PATH: ${{ github.workspace }}/config/crush_model.json
+        run: python -m pytest tests/unit/ -q
