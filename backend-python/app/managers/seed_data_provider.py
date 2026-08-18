@@ -86,7 +86,7 @@ class SeedDataProvider:
             # lands via EpaRinFileClient; when the CSV is absent, RIN simply
             # stays None on merged_daily rather than showing fabricated values.
             # The margin calculator handles missing RIN gracefully (rin_included
-            # falls back to False and the RIN revenue line drops out).
+            # falls back to False and the regulatory D6 RIN value drops out).
 
             if obs_date.day == 12:
                 wasde += self._random.uniform(-40, 40)
