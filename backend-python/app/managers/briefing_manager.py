@@ -261,7 +261,25 @@ class BriefingManager:
             "margin_drivers": self._margin_drivers_context,
         }[question_id]
         system_prompt = _QUESTION_SYSTEM_PROMPTS[question_id]
-        context = context_fn()
+        # A crash in the context builder shouldn't bubble up as an HTTP 500 —
+        # log the full traceback for debugging and surface a friendly message
+        # in the chip. Otherwise the UI just shows "Failed to fetch" and the
+        # user has no signal about which data field went missing.
+        try:
+            context = context_fn()
+        except Exception as exc:
+            _logger.exception(
+                "Preset question '%s' context build failed", question_id
+            )
+            return {
+                "question_id": question_id,
+                "question_label": self.PRESET_QUESTIONS[question_id],
+                "answer": None,
+                "unavailable_reason": (
+                    f"Couldn't assemble the data slice for this chip "
+                    f"({type(exc).__name__}). Check server logs for details."
+                ),
+            }
 
         context_json = json.dumps(context, default=str, indent=2)
         user_prompt = f"DATA (JSON):\n{context_json}\n\nAnswer the question now."
