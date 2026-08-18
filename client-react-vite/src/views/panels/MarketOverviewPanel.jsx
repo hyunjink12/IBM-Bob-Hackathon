@@ -120,23 +120,28 @@ function BlenderAdvantageSparkline({ series }) {
           aria-label="Blender advantage over the last year"
           role="img"
         >
+          {/* Stroke + fill use var(--accent) via inline style so the
+              sparkline swaps between blue (dark) and cream-orange (light)
+              with the theme toggle. Zero-axis uses --border-strong so it
+              reads on both backgrounds without a hard black hairline. */}
           <defs>
             <linearGradient id="blenderAdvGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#4589ff" stopOpacity="0.35" />
-              <stop offset="100%" stopColor="#4589ff" stopOpacity="0.02" />
+              <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.02" />
             </linearGradient>
           </defs>
           {zeroY >= pad.t && zeroY <= pad.t + iH && (
             <line
               x1={pad.l} y1={zeroY} x2={pad.l + iW} y2={zeroY}
-              stroke="#3a4a63" strokeWidth="0.6" strokeDasharray="3,3"
+              style={{ stroke: 'var(--border-strong)' }}
+              strokeWidth="0.6" strokeDasharray="3,3"
             />
           )}
           <path d={areaPath} fill="url(#blenderAdvGrad)" stroke="none" />
           <path
             d={linePath}
             fill="none"
-            stroke="#4589ff"
+            style={{ stroke: 'var(--accent)' }}
             strokeWidth="1.6"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -145,7 +150,8 @@ function BlenderAdvantageSparkline({ series }) {
             <line
               x1={hoverPoint.x} y1={pad.t}
               x2={hoverPoint.x} y2={pad.t + iH}
-              stroke="#6b8bb5" strokeWidth="0.6"
+              style={{ stroke: 'var(--text-tertiary)' }}
+              strokeWidth="0.6"
               vectorEffect="non-scaling-stroke"
             />
           )}

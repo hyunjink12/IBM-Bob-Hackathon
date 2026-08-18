@@ -55,7 +55,7 @@ export function CornEthanolSpreadPanel({ spread, config }) {
         series={spread.series}
         yKeys={['crush_spread_usd_per_bushel']}
         labels={['Spread']}
-        colors={['#c792ea']}
+        colors={['accent']}
         valueFormatter={(value) => `$${value?.toFixed(2)}`}
       />
     </section>

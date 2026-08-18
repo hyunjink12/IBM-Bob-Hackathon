@@ -120,7 +120,7 @@ export function CrushMarginPanel({ margins, config, eiaReleases }) {
         series={margins.series}
         yKeys={['margin_per_bushel']}
         labels={['$/bu']}
-        colors={['#5b9cf5']}
+        colors={['accent']}
         valueFormatter={(value) => `$${value?.toFixed(2)}`}
         events={buildReleaseEvents(eiaReleases)}
       />

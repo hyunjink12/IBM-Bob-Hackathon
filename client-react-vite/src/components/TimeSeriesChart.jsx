@@ -10,6 +10,50 @@ function formatChartAxisDate(unixSeconds) {
 }
 
 /**
+ * Read a CSS custom property from :root at call time. uPlot needs concrete
+ * color strings (it draws to canvas, doesn't inherit CSS), so we resolve
+ * theme tokens up-front instead of passing var() references through.
+ */
+function readCssVar(name, fallback) {
+  if (typeof window === 'undefined') return fallback
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  return value || fallback
+}
+
+/**
+ * Track the active `data-theme` on <html> and trigger a re-render whenever
+ * it changes. The chart useEffect keys on the returned string so uPlot
+ * fully re-inits with fresh theme colors on toggle.
+ */
+function useThemeVersion() {
+  const [theme, setTheme] = useState(() =>
+    typeof document !== 'undefined' ? document.documentElement.dataset.theme || 'dark' : 'dark',
+  )
+  useEffect(() => {
+    if (typeof MutationObserver === 'undefined') return undefined
+    const observer = new MutationObserver(() => {
+      setTheme(document.documentElement.dataset.theme || 'dark')
+    })
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    })
+    return () => observer.disconnect()
+  }, [])
+  return theme
+}
+
+/**
+ * Resolve a caller-supplied series color. Passing the sentinel `'accent'`
+ * (from a panel that wants to track the theme) returns the current
+ * --accent token; any hex or rgba() passes through untouched.
+ */
+function resolveSeriesColor(color) {
+  if (color === 'accent') return readCssVar('--accent', '#4589ff')
+  return color
+}
+
+/**
  * Convert an incoming date value to Unix seconds anchored at LOCAL midnight.
  *
  * Backend sends date-only ISO strings ("2026-07-30"). `new Date("2026-07-30")`
@@ -51,11 +95,21 @@ export function TimeSeriesChart({
   const plotRef = useRef(null)
   const eventsByXRef = useRef(new Map())
   const [hoverPopup, setHoverPopup] = useState(null)
+  const theme = useThemeVersion()
 
   useEffect(() => {
     if (!containerRef.current || !series?.length) {
       return undefined
     }
+
+    // Read theme tokens fresh on every init — grid + axis + accent all track
+    // the active theme. The uPlot canvas doesn't inherit CSS, so we have to
+    // resolve concrete color strings up-front.
+    const gridStroke = readCssVar('--border-subtle', '#1f242c')
+    const axisStroke = readCssVar('--text-secondary', '#8a929c')
+    const accentColor = readCssVar('--accent', '#4589ff')
+    const pageBg = readCssVar('--bg-page', '#0a0c0f')
+    const resolvedSeriesColors = colors.map(resolveSeriesColor)
 
     const xValues = series.map((point) => toUnixSecondsLocal(point[xKey]))
     const primaryKey = eventPrimaryKey ?? yKeys[0]
@@ -96,7 +150,7 @@ export function TimeSeriesChart({
           {},
           ...yKeys.map((_, index) => ({
             label: labels[index],
-            stroke: colors[index],
+            stroke: resolvedSeriesColors[index],
             width: 2,
             points: { show: false },
           })),
@@ -104,15 +158,17 @@ export function TimeSeriesChart({
             ? [
                 {
                   label: 'EIA release',
-                  stroke: '#4589ff',
-                  fill: '#4589ff',
+                  stroke: accentColor,
+                  fill: accentColor,
                   width: 0,
                   paths: () => null,
                   points: {
                     show: true,
                     size: 7,
-                    stroke: '#0a0c0f',
-                    fill: '#4589ff',
+                    // Marker outline uses the page background so the dot
+                    // pops against both dark and light chart canvases.
+                    stroke: pageBg,
+                    fill: accentColor,
                   },
                 },
               ]
@@ -120,15 +176,15 @@ export function TimeSeriesChart({
         ],
         axes: [
           {
-            stroke: '#8a929c',
-            grid: { stroke: '#1f242c' },
-            ticks: { stroke: '#1f242c' },
+            stroke: axisStroke,
+            grid: { stroke: gridStroke, width: 1 },
+            ticks: { stroke: gridStroke, width: 1 },
             values: (_, ticks) => ticks.map(formatChartAxisDate),
           },
           {
-            stroke: '#8a929c',
-            grid: { stroke: '#1f242c' },
-            ticks: { stroke: '#1f242c' },
+            stroke: axisStroke,
+            grid: { stroke: gridStroke, width: 1 },
+            ticks: { stroke: gridStroke, width: 1 },
             values: (_, ticks) => ticks.map((value) => valueFormatter(value)),
           },
         ],
@@ -183,7 +239,7 @@ export function TimeSeriesChart({
       plotRef.current = null
       setHoverPopup(null)
     }
-  }, [series, xKey, yKeys, labels, colors, height, title, valueFormatter, events, eventPrimaryKey])
+  }, [series, xKey, yKeys, labels, colors, height, title, valueFormatter, events, eventPrimaryKey, theme])
 
   return (
     <div className="chart-shell" ref={containerRef} style={{ position: 'relative' }}>

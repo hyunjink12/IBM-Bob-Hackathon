@@ -98,7 +98,7 @@ export function CotPositioningPanel({
         series={series}
         yKeys={['managed_money_net']}
         labels={['MM net']}
-        colors={['#4589ff']}
+        colors={['accent']}
         valueFormatter={(value) =>
           value == null ? '—' : `${Math.round(value / 1000).toLocaleString()}k`
         }
