@@ -224,9 +224,16 @@ class DashboardManager:
             latest.obs_date, lookback_days=365, current_value=blender_advantage
         )
 
+        # RBOB rides in the blending payload (it isn't a crush model input, so
+        # it's not in OVERVIEW_SERIES) — but the frontend still renders a
+        # standard metric card for it. Expose the same last_updated timestamp
+        # the metric grid uses so the stale badge stays consistent.
+        rbob_last_updated = self._repository.get_series_last_updated(SERIES_RBOB)
+
         return {
             "as_of": latest.obs_date.isoformat(),
             "rbob_usd_per_gallon": round(rbob, 4),
+            "rbob_last_updated": rbob_last_updated.isoformat() if rbob_last_updated else None,
             "ethanol_usd_per_gallon": round(ethanol, 4),
             "d6_rin_usd_per_gallon": round(rin, 4) if rin is not None else None,
             "effective_ethanol_cost_usd_per_gallon": round(effective_ethanol_cost, 4),
