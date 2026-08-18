@@ -175,8 +175,32 @@ def test_generation_failure_returns_unavailable_without_raising():
     )
     result = mgr.get_or_generate(ingest_cache_key="key-xyz")
     assert result["text"] is None
-    assert "API timeout" in result["unavailable_reason"]
+    # unavailable_reason must be a short, user-facing string — never the raw
+    # exception. Prevents watsonx JSON error blobs from leaking into the UI.
+    reason = result["unavailable_reason"]
+    assert "API timeout" not in reason
+    assert "Granite" in reason
     repo.upsert_briefing.assert_not_called()
+
+
+def test_rate_limit_error_maps_to_friendly_message():
+    """429 with `consumption_limit_reached` gets a specific retry message."""
+    repo = _stub_repository(briefing_row=None)
+    client = _configured_client()
+    raw_429 = (
+        'watsonx.ai API error 429: {"errors":[{"code":"consumption_limit_reached",'
+        '"message":"The usage limit for the current plan has been reached"}]}'
+    )
+    client.generate = MagicMock(side_effect=RuntimeError(raw_429))
+    mgr = BriefingManager(
+        repository=repo,
+        watsonx_client=client,
+        backtester=_stub_backtester(),
+    )
+    result = mgr.get_or_generate(ingest_cache_key="key-xyz")
+    reason = result["unavailable_reason"]
+    assert "consumption_limit_reached" not in reason  # no raw JSON leaks
+    assert "concurrent" in reason.lower() or "retry" in reason.lower()
 
 
 # ---------------------------------------------------------------------------
