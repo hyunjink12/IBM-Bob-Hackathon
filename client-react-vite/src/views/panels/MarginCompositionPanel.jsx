@@ -67,8 +67,10 @@ export function MarginCompositionPanel({ composition }) {
               <CompositionRow key={c.label} row={c} maxAbs={maxAbs} />
             ))}
             <p className="composition__reg-note">
-              Regulatory-value equivalent for scale — not assumed to be direct
-              producer operating revenue.
+              Value captured by the blender/refiner at the point of blending,
+              not by the ethanol producer. Shown per bushel-equivalent for
+              scale of the RFS compliance market — pass-through to
+              producer/corn economics is small and out of scope here.
             </p>
           </>
         )}
