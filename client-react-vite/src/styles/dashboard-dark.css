@@ -455,6 +455,10 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  /* Nudge the value stack down a touch — the sparkline block sets the row
+     height, so this shift lands within existing vertical slack without
+     enlarging the card. */
+  margin-top: 0.35rem;
 }
 
 .blending-card__value {
