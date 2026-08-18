@@ -67,11 +67,16 @@ def test_ddgs_uses_short_ton_not_per_pound(
 
 
 @pytest.mark.unit
-def test_rin_revenue_lifts_margin_by_exactly_rin_price_times_yield(
+def test_d6_rin_value_is_tracked_separately_from_plant_operating_margin(
     crush_config: CrushModelConfig,
     sample_row: MergedDailyRow,
 ) -> None:
-    """RIN present must add exactly (rin_price × 2.8) to $/bu margin."""
+    """
+    Adding a D6 RIN price must NOT change the plant operating margin — RIN
+    dollars accrue to the party that separates the RIN (typically the blender),
+    not the ethanol producer's physical P&L. The RIN value is surfaced on a
+    separate `d6_rin_value_per_bushel` field for the UI's regulatory layer.
+    """
     calculator = CrushMarginCalculator(crush_config)
     without_rin = calculator.calculate(sample_row)
     with_rin_row = MergedDailyRow(
@@ -81,10 +86,20 @@ def test_rin_revenue_lifts_margin_by_exactly_rin_price_times_yield(
     assert without_rin is not None and with_rin is not None
     assert without_rin.rin_included is False
     assert with_rin.rin_included is True
-    expected_lift = 0.60 * crush_config.ethanol_gallons_per_bushel
-    assert with_rin.margin_per_bushel == pytest.approx(
-        without_rin.margin_per_bushel + expected_lift
+
+    # Plant operating margin MUST be identical — RIN is not producer revenue.
+    assert with_rin.plant_operating_margin == pytest.approx(
+        without_rin.plant_operating_margin
     )
+    # `margin_per_bushel` is the backward-compat alias for plant operating margin.
+    assert with_rin.margin_per_bushel == pytest.approx(
+        without_rin.margin_per_bushel
+    )
+
+    # But the RIN value is exposed for the regulatory-layer UI.
+    expected_rin_value = 0.60 * crush_config.ethanol_gallons_per_bushel
+    assert with_rin.d6_rin_value_per_bushel == pytest.approx(expected_rin_value)
+    assert without_rin.d6_rin_value_per_bushel == pytest.approx(0.0)
 
 
 @pytest.mark.unit
@@ -108,11 +123,15 @@ def test_rin_missing_leaves_calculation_identical_to_pre_rin_math(
 
 
 @pytest.mark.unit
-def test_margin_composition_sums_to_margin_per_bushel_with_rin(
+def test_physical_components_sum_to_plant_operating_margin(
     crush_config: CrushModelConfig,
     sample_row: MergedDailyRow,
 ) -> None:
-    """decompose() lines must sum to calculate() total, including the RIN line."""
+    """
+    Physical decomposition rows (ethanol, DDGS, corn oil, corn, gas, opex)
+    must sum to plant_operating_margin. The D6 RIN value is intentionally
+    excluded from that sum — it's a separate regulatory-value layer.
+    """
     calculator = CrushMarginCalculator(crush_config)
     with_rin_row = MergedDailyRow(
         **{**sample_row.__dict__, "d6_rin_usd_per_gallon": 0.55}
@@ -120,11 +139,15 @@ def test_margin_composition_sums_to_margin_per_bushel_with_rin(
     result = calculator.calculate(with_rin_row)
     comp = calculator.decompose(with_rin_row)
     assert result is not None and comp is not None
-    component_sum = (
+    physical_sum = (
         comp.ethanol_revenue + comp.ddgs_revenue + comp.corn_oil_revenue
-        + comp.rin_revenue + comp.corn_cost + comp.nat_gas_cost + comp.misc_opex_cost
+        + comp.corn_cost + comp.nat_gas_cost + comp.misc_opex_cost
     )
-    assert component_sum == pytest.approx(result.margin_per_bushel)
+    assert physical_sum == pytest.approx(result.plant_operating_margin)
+    # D6 RIN value equals the standalone product of price × yield.
+    assert comp.d6_rin_value == pytest.approx(
+        0.55 * crush_config.ethanol_gallons_per_bushel
+    )
 
 
 @pytest.mark.unit
