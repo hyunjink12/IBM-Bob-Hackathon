@@ -477,14 +477,17 @@ class DashboardManager:
         production_rows = self._repository.fetch_raw_observations_by_series(
             SERIES_ETHANOL_PRODUCTION, wow_lookback, end_date
         )
-        # Also carry the stocks value with its unit_scale (kbbl → MMbbl).
         production_by_date = {r.obs_date: r.value for r in production_rows}
 
         releases: list[dict] = []
         prior_stocks: float | None = None
         prior_production: float | None = None
         for row in stocks_rows:
-            stocks_mmbbl = row.value * 0.001  # kbbl → MMbbl, matches EiaSeriesSpec
+            # EiaSeriesSpec.unit_scale=0.001 is already applied at ingest by
+            # EiaClient — raw_observations.value for this series is already
+            # in MMbbl. A second scaling here made a 25 MMbbl print render as
+            # 0.03 MMbbl in the EIA-release chart tooltip.
+            stocks_mmbbl = row.value
             production_mbpd = production_by_date.get(row.obs_date)
 
             stocks_wow_pct = (
