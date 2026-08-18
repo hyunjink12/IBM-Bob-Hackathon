@@ -101,7 +101,7 @@ D6 RIN revenue is a first-class margin driver — at current prices it's often t
 3. Multi-select all **Transfer Years** (click first year, Shift-click last year).
 4. Keep **Fuel (D Code)** set to `D6`.
 5. Click **Export Table** — downloads a CSV.
-6. **Overwrite** `backend-python/data/epa/rin_prices.csv` with the fresh download. **Keep the same filename** — the app watches that specific path.
+6. **Overwrite** `backend-python/data/epa/rin_prices_2026.csv` with the fresh download. **Keep the same filename** — the app watches that specific path. When the calendar year rolls over, rename to `rin_prices_2027.csv` and update `EpaRinFileClient.DEFAULT_PATH` (or override with `APP_EPA_RIN_CSV_PATH`).
 7. Trigger ingest so the app re-parses the file:
    ```bash
    curl -X POST http://localhost:8000/api/admin/ingest -H "Authorization: Bearer $APP_ADMIN_TOKEN"
@@ -174,7 +174,7 @@ cd backend-python
 - **Backend**: Railway — repo picks up `railway.json` + `backend-python/Dockerfile` automatically.
   1. In Railway → **Volumes** → attach a volume to the service and set the mount path to `/data`.
   2. In **Variables**, set `APP_EIA_API_KEY`, `APP_ADMIN_TOKEN`, `APP_WATSONX_API_KEY`, `APP_WATSONX_PROJECT_ID`. `APP_DATA_DIR=/data` is already baked into the Dockerfile.
-  3. After first deploy, drop a fresh EPA D6 CSV into the volume at `/data/epa/rin_prices.csv` (Railway CLI: `railway run --service backend -- bash -c "cat > /data/epa/rin_prices.csv" < rin_prices.csv`). The DuckDB file lives beside it at `/data/ethanol_dashboard.duckdb` and persists across redeploys.
+  3. First deploy auto-seeds `/data/epa/` from the vintage-tagged CSVs baked into the image (`rin_prices_2026.csv` etc.) — no manual upload needed. To refresh mid-year, `railway ssh` into the service and overwrite `/data/epa/rin_prices_2026.csv`. The DuckDB file lives beside it at `/data/ethanol_dashboard.duckdb` and persists across redeploys.
 - Overrides: `APP_DUCKDB_PATH` and `APP_EPA_RIN_CSV_PATH` still work if you want to relocate individual files.
 
 ## Config
@@ -185,7 +185,7 @@ cd backend-python
 | `config/wasde_schedule.json` | USDA-published WASDE release dates (see caveat below) |
 | `client-react-vite/src/config/dashboard_config.js` | Z-score window, chart range, tooltips |
 | `backend-python/.env` | Secrets only (EIA key, admin token, watsonx credentials) |
-| `backend-python/data/epa/rin_prices.csv` | EPA D6 RIN weekly prices — **overwrite weekly** (see "Refreshing D6 RIN prices" above). In prod, lives at `$APP_DATA_DIR/epa/rin_prices.csv` on the mounted volume. |
+| `backend-python/data/epa/rin_prices_2026.csv` | EPA D6 RIN weekly prices, **vintage-tagged so anyone can see this is a snapshot, not live** — overwrite weekly (see "Refreshing D6 RIN prices" above). In prod, lives at `$APP_DATA_DIR/epa/rin_prices_2026.csv` on the mounted volume; rename to `_2027.csv` when the year rolls over. |
 
 ## Data caveats
 

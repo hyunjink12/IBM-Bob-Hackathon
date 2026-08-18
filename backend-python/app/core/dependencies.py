@@ -48,7 +48,7 @@ def resolve_epa_rin_csv_path(settings: AppSettings) -> Path:
     if settings.epa_rin_csv_path:
         csv_path = Path(settings.epa_rin_csv_path).expanduser()
         return csv_path.resolve() if csv_path.is_absolute() else (_backend_root() / csv_path).resolve()
-    return resolve_data_dir(settings) / "epa" / "rin_prices.csv"
+    return resolve_data_dir(settings) / "epa" / "rin_prices_2026.csv"
 
 
 def configure_runtime(settings: AppSettings) -> None:

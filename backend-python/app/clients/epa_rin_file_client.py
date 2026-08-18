@@ -31,7 +31,11 @@ class EpaRinFileClient:
     number industry commentary quotes.
     """
 
-    DEFAULT_PATH = Path("data/epa/rin_prices.csv")
+    # Filename carries the vintage year so mentors looking at the volume or
+    # the repo can see at a glance which EPA snapshot is loaded. Update to
+    # `rin_prices_2027.csv` etc. when the calendar year rolls over and drop
+    # the new CSV alongside — override via APP_EPA_RIN_CSV_PATH if needed.
+    DEFAULT_PATH = Path("data/epa/rin_prices_2026.csv")
     SOURCE = "epa_emts"
     LOGICAL_ID = "d6_rin_usd_per_gallon"
 

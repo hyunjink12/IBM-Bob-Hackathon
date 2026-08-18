@@ -55,7 +55,7 @@ Three new / changed sources since the last handoff:
 ### D6 RIN prices — EPA file-drop
 
 - **Source:** EPA EMTS RIN Trades and Price Information dashboard (Qlik-based, JS-rendered, no public API)
-- **Workflow:** user manually exports CSV → drops into `backend-python/data/epa/rin_prices.csv` → next ingest picks it up
+- **Workflow:** user manually exports CSV → drops into `backend-python/data/epa/rin_prices_2026.csv` (vintage-tagged filename so viewers know it's a snapshot) → next ingest picks it up. Rename to `_2027.csv` at year rollover and update `EpaRinFileClient.DEFAULT_PATH` in lockstep.
 - **Client:** [`EpaRinFileClient`](backend-python/app/clients/epa_rin_file_client.py). Filters to canonical D6: `RIN Year == Transfer Year AND QAP Service Type == "Unverified"`. Source-tagged `epa_emts`, `LIVE_SOURCES` in `SeedDataStatusManager` so it doesn't trigger the seed banner.
 - **Test coverage:** 4 tests in `test_epa_rin_file_client.py` (missing file, filter rules, date/price parsing, unparseable rows)
 - **Seed provider does NOT emit RIN** — real data or nothing. Missing RIN falls back cleanly (rin_included=False on `MarginComposition`).
@@ -159,7 +159,7 @@ blender_advantage_$/gal  =  RBOB_$/gal  −  (ethanol_$/gal  −  D6_RIN_$/gal)
 
 1. **RIN share of margin sparkline / dedicated panel** — the "policy vs. market risk decomposition" idea from [`RIN_INSIGHT_HANDOFF.md`](RIN_INSIGHT_HANDOFF.md). Option A (small tile) is 1–2 hours; Option B (dedicated panel) is 4–6 hours. Would be genuinely differentiating for the pitch.
 2. **Blending regime threshold tuning** — replace placeholder `±$0.30` with the 20th/80th percentile of the trailing-1Y `blender_advantage` distribution. Would take ~30 min. Not urgent, but improves defensibility.
-3. **Two unused EPA CSVs** — `rin_transaction_volumes.csv` and `rin_annual_sales.csv` sit in `data/epa/` but aren't wired into anything. Transaction volume could feed a "RIN liquidity" signal. Not needed for current features.
+3. **Two unused EPA CSVs** — `rin_transaction_volumes_2026.csv` and `rin_annual_sales_2026.csv` sit in `data/epa/` but aren't wired into anything. Transaction volume could feed a "RIN liquidity" signal. Not needed for current features.
 
 ### Would need user input
 
