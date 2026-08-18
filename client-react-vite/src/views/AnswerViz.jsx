@@ -457,6 +457,8 @@ function RinSparkline({ data }) {
   const latest = points[points.length - 1]
   const pctRank = rin?.percentile_full_history
   const pctLabel = pctRank == null ? '—' : `${Math.round(pctRank * 100)}%ile`
+  // Sourced instrument is a D6 RIN transaction print; label as $/RIN even
+  // though for corn ethanol the ethanol-equivalent value is 1.0.
   const priceLabel = `$${values[values.length - 1].toFixed(2)}`
   const firstDate = prints[0].date?.slice(5)
   const lastDate = prints[prints.length - 1].date?.slice(5)
@@ -478,7 +480,7 @@ function RinSparkline({ data }) {
                 className="viz-dot-anim" style={{ animationDelay: '0.5s' }} />
         <text x={VW - pad.r + 8} y={pad.t + 6} fontSize="10.5" fill="#f0a878" fontWeight="600"
               className="answer-viz--fadein" style={{ animationDelay: '0.4s' }}>
-          {priceLabel}/gal
+          {priceLabel}/RIN
         </text>
         <text x={VW - pad.r + 8} y={pad.t + 20} fontSize="8.5" fill="#9aa5b1"
               className="answer-viz--fadein" style={{ animationDelay: '0.5s' }}>
