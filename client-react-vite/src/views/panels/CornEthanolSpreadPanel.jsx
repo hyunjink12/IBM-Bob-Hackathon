@@ -2,11 +2,16 @@ import { MetricTooltip } from '../../components/MetricTooltip.jsx'
 import { TimeSeriesChart } from '../../components/TimeSeriesChart.jsx'
 
 /**
- * Panel 3 — CME-standard ethanol crush spread (2.8 × ethanol − corn).
+ * Panel 3 — Simple ethanol/corn spread (2.8 × ethanol − corn).
+ *
+ * Two-leg market screen for the feedstock-vs-output relationship. This is
+ * NOT the CME/CBOT-listed corn-for-ethanol crush contract; do not call it
+ * that. Coproducts, operating costs, and the D6 RIN regulatory value are
+ * all excluded.
  */
 export function CornEthanolSpreadPanel({ spread, config }) {
   if (!spread) {
-    return <section className="panel">Loading crush spread…</section>
+    return <section className="panel">Loading spread…</section>
   }
 
   const current = spread.current
@@ -15,8 +20,8 @@ export function CornEthanolSpreadPanel({ spread, config }) {
   return (
     <section className="panel panel--hero">
       <header className="panel__header">
-        <MetricTooltip label="CME Ethanol Crush Spread" tooltip={config.tooltips.spread}>
-          <h2>CME Ethanol Crush Spread</h2>
+        <MetricTooltip label="Simple Ethanol/Corn Spread" tooltip={config.tooltips.spread}>
+          <h2>Simple Ethanol/Corn Spread</h2>
         </MetricTooltip>
         <span className="panel__meta">2.8 × ethanol $/gal − corn $/bu</span>
       </header>
@@ -46,10 +51,10 @@ export function CornEthanolSpreadPanel({ spread, config }) {
       )}
 
       <TimeSeriesChart
-        title="Crush spread ($/bu of corn)"
+        title="Simple ethanol/corn spread ($/bu of corn)"
         series={spread.series}
         yKeys={['crush_spread_usd_per_bushel']}
-        labels={['Crush spread']}
+        labels={['Spread']}
         colors={['#c792ea']}
         valueFormatter={(value) => `$${value?.toFixed(2)}`}
       />
