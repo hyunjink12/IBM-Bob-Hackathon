@@ -38,12 +38,12 @@ export const dashboardConfig = {
   },
   tooltips: {
     margin_per_bushel:
-      'Estimated crush margin per bushel of corn after ethanol, DDGS, gas, and opex.',
+      'Plant operating margin per bushel of corn: ethanol + coproduct revenue minus corn + gas + opex costs. Excludes the D6 RIN regulatory-value equivalent, which is shown separately in the Ethanol Economics Decomposition panel.',
     margin_per_gallon:
-      'Same crush margin expressed per gallon of ethanol output.',
-    z_score: 'How today’s margin compares to the selected historical window.',
+      'Plant operating margin per gallon of ethanol produced (per-bushel margin ÷ 2.8 gal/bu). Physical crush P&L only; RIN regulatory value is separate.',
+    z_score: 'How today’s plant operating margin compares to the selected historical window.',
     signal_label: 'Rich / weak labels come from the z-score bands in config.',
     spread:
-      'CME-standard ethanol crush spread: 2.8 × ethanol $/gal − corn $/bu (Iowa CARD dry-mill yield). Flags feedstock-vs-output dislocation without DDGS/gas/opex noise.',
+      'Simple ethanol/corn spread: 2.8 × ethanol $/gal − corn $/bu using the Iowa CARD dry-mill ethanol yield. This is a two-leg market screen for the feedstock-vs-output relationship, not the CME/CBOT-listed corn-for-ethanol crush and not a complete plant margin. DDGS, corn oil, natural gas, opex, and D6 RIN value are excluded.',
   },
 }
