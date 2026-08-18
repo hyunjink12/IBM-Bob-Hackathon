@@ -92,7 +92,7 @@ curl -X POST http://localhost:8000/api/admin/ingest \
 
 **This is the only recurring manual step in the whole pipeline.** Everything else — Yahoo futures, EIA weekly, CFTC COT — refreshes automatically on ingest. D6 RIN prices come from a JavaScript-rendered EPA dashboard that has no clean API, so the workflow is: download CSV → overwrite the same file path → trigger ingest.
 
-D6 RIN revenue is a first-class margin driver — at current prices it's often the largest single revenue line in the crush margin, larger than the ethanol sale itself. Skipping this refresh means the app forward-fills a stale RIN price and the margin drifts from reality.
+The **D6 RIN value** is displayed as a regulatory-value equivalent alongside the plant operating margin — at current prices it's currently larger than the simple ethanol/corn commodity spread. Skipping this refresh means the app forward-fills a stale RIN price and the regulatory-value layer drifts from reality. The dashboard does not assume producers capture the full RIN value dollar-for-dollar as revenue (pass-through to obligated parties is out of scope).
 
 **Weekly workflow:**
 
@@ -108,7 +108,7 @@ D6 RIN revenue is a first-class margin driver — at current prices it's often t
    ```
    Or restart the backend — startup runs the pipeline automatically.
 
-The `EpaRinFileClient` filters the CSV down to canonical rows (RIN Year == Transfer Year AND QAP Service Type == "Unverified") and upserts them tagged `source="epa_emts"`. Old EPA rows are replaced; existing Yahoo/EIA data is untouched. If the CSV is missing entirely, the RIN revenue line drops out of the margin composition and the RIN card shows `—`; everything else keeps working.
+The `EpaRinFileClient` filters the CSV down to canonical rows (RIN Year == Transfer Year AND QAP Service Type == "Unverified") and upserts them tagged `source="epa_emts"`. Old EPA rows are replaced; existing Yahoo/EIA data is untouched. If the CSV is missing entirely, the D6 RIN value layer drops out of the composition and the RIN card shows `—`; everything else keeps working.
 
 ## Blending economics
 
@@ -132,34 +132,41 @@ blender_advantage_$/gal  =  RBOB_$/gal  −  (ethanol_$/gal  −  D6_RIN_$/gal)
 
 **Known simplifications:** the calculation uses front-month CBOT RBOB and CME EH ethanol — not physical rack prices at a specific terminal. A real desk would layer in freight to the blending point, denaturant cost (~$0.05–0.10/gal), and terminal-specific basis. The current number is a national indicative signal, not a specific blender's P&L.
 
-## Crush margin formulas
+## Ethanol economics formulas
 
-The dashboard displays two related but different numbers. Know which one you're looking at.
+The dashboard displays three distinct numbers. Know which one you're looking at — they are NOT interchangeable.
 
-**Full plant crush margin (per bushel of corn)** — what the dry-mill actually earns:
+**1. Plant operating margin (per bushel of corn)** — physical crush P&L only:
 
 ```
-margin_per_bushel =
+plant_operating_margin =
     (ethanol_$/gal × 2.8)              # ethanol revenue
   + (DDGS_$/short_ton × 17 ÷ 2000)     # DDGS coproduct revenue
   + (corn_oil_$/lb × 0.7)              # corn oil coproduct revenue
-  + (d6_rin_$/gal × 2.8)               # D6 RIN revenue (1 RIN per gal ethanol)
   − corn_$/bu                          # feedstock cost
   − (nat_gas_$/MMBtu × 0.0728)         # process energy cost
   − 0.35                               # misc opex placeholder
 
-margin_per_gallon = margin_per_bushel ÷ 2.8
+plant_operating_margin_per_gallon = plant_operating_margin ÷ 2.8
 ```
 
-Constants live in [`config/crush_model.json`](config/crush_model.json) and follow the Iowa State CARD dry-mill archetype. Coproduct and RIN lines drop out cleanly (revenue = 0) when the underlying price is missing on the merged daily row.
+Constants live in [`config/crush_model.json`](config/crush_model.json) and follow the Iowa State CARD dry-mill archetype. Coproduct lines drop out cleanly (revenue = 0) when the underlying price is missing on the merged daily row.
 
-**CME-standard ethanol crush spread (physical only)** — the exchange-listed input dislocation gauge:
+**2. D6 RIN regulatory value (per bushel of corn)** — compliance-market scale, tracked separately:
 
 ```
-crush_spread_$/bu = (ethanol_$/gal × 2.8) − corn_$/bu
+d6_rin_value_per_bushel = d6_rin_$/gal × 2.8
 ```
 
-No coproducts, no costs, no RIN. Matches CBOT `2.8 × EH − ZC`. This is the number a paper trader hedges; it's not the plant's P&L.
+This converts the EPA D6 transaction price into a per-bushel equivalent so it can be compared to the physical margin at the same unit. It is **not** added into `plant_operating_margin` — RIN dollars accrue to the party that separates the RIN (typically the blender/refiner), and pass-through to the ethanol producer depends on physical-market bargaining out of scope for this tool. Frame it as *the regulatory value associated with the ethanol gallon*, not *the plant's RIN revenue*.
+
+**3. Simple ethanol/corn spread (per bushel of corn)** — two-leg screen:
+
+```
+simple_ethanol_corn_spread = (ethanol_$/gal × 2.8) − corn_$/bu
+```
+
+No coproducts, no costs, no RIN. This is a simplified market-spread screen for the primary input/output dislocation. It is **NOT** the CME/CBOT-listed corn-for-ethanol crush contract; do not call it that. A paper trader hedging the exchange-listed contract needs a more complete instrument spec.
 
 ## Tests
 
