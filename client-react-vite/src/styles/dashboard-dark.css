@@ -335,13 +335,91 @@
      span-3 width — preserveAspectRatio="none" will stretch horizontally,
      but the rally at the right stays legible above a compact card. */
   height: 72px;
-  margin-bottom: 0.2rem;
 }
 
 @media (max-width: 1100px) {
   .blending-card__sparkline {
     height: 60px;
   }
+}
+
+/* Container for the interactive sparkline: SVG + hover crosshair tooltip
+   sit above a small axis row with the first/last observation dates. */
+.blending-card__spark-wrap {
+  position: relative;
+}
+
+.blending-card__spark-hit {
+  position: relative;
+  cursor: crosshair;
+}
+
+/* Hover dot — rendered as an HTML element (not an SVG <circle>) so it stays
+   round despite the sparkline SVG's preserveAspectRatio="none" scaling. */
+.blending-card__spark-dot {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4589ff;
+  border: 1px solid #0b0f14;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* Hover tooltip floats above the sparkline, anchored by percentage across
+   the container. `translateX(-50%)` centers it by default; the `--right`
+   modifier flips the anchor for cursors past the midpoint so it never
+   clips the right edge. */
+.blending-card__spark-tooltip {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  padding: 0.3rem 0.5rem;
+  background: rgba(11, 15, 20, 0.92);
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  font-size: 0.7rem;
+  line-height: 1.25;
+  color: var(--text-primary);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
+  font-variant-numeric: tabular-nums;
+}
+
+.blending-card__spark-tooltip--left {
+  transform: translateX(0);
+}
+
+.blending-card__spark-tooltip--right {
+  transform: translateX(-100%);
+}
+
+.blending-card__spark-tooltip-date {
+  color: var(--text-tertiary);
+  font-size: 0.65rem;
+}
+
+.blending-card__spark-tooltip-value {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.blending-card__spark-tooltip-unit {
+  margin-left: 0.15rem;
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+
+.blending-card__spark-axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.15rem;
+  padding: 0 2px;                /* matches the sparkline viewBox left/right pad */
+  font-size: 0.65rem;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Regime chip pulled from the top-right header down into the value block —
