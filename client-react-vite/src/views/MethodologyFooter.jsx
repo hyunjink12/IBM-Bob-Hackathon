@@ -8,11 +8,28 @@ export function MethodologyFooter() {
       <p>
         Simplified Iowa State CARD dry-mill model: 1 bushel of corn plus 72.8k BTU
         natural gas produces 2.8 gallons ethanol, 17 lbs DDGS, and 0.7 lbs corn oil.
-        The plant margin also credits <strong>D6 RIN revenue</strong> (1 RIN per gallon
-        of ethanol) — often the largest single revenue line at current RIN prices.
-        The CME-standard crush spread is <em>physical only</em> (2.8 × ethanol − corn)
-        and is shown separately from the full plant P&amp;L. DDGS is quoted in{' '}
-        <strong>$/short ton</strong> throughout the UI.
+        The <strong>plant operating margin</strong> is physical only — ethanol,
+        DDGS, and corn oil revenue minus corn, natural gas, and misc opex costs.
+        DDGS is quoted in <strong>$/short ton</strong> throughout the UI.
+      </p>
+      <p>
+        <strong>D6 RIN treatment.</strong> D6 prices come from EPA RIN
+        transaction-price data. The dashboard converts the D6 price into a
+        per-bushel <strong>regulatory-value equivalent</strong> using the modeled
+        ethanol yield (~$1.99/RIN × 2.8 gal/bu ≈ $5.57/bu). This is the scale of
+        the compliance credit associated with the ethanol output — shown
+        separately from the plant operating margin. The model does <em>not</em>{' '}
+        assume producers capture the full quoted RIN value dollar-for-dollar;
+        actual producer capture depends on pass-through economics between
+        producers and obligated parties, which is out of scope here.
+      </p>
+      <p>
+        <strong>Simple ethanol/corn spread.</strong> The Financial panel's
+        two-leg spread is <em>ethanol value per bushel minus corn cost</em>{' '}
+        (2.8 × ethanol − corn). This is a simplified market-spread screen; it is
+        NOT the CME/CBOT-listed corn-for-ethanol crush and should not be read
+        as a complete plant margin. Coproducts, operating costs, and D6 RIN
+        value are all excluded.
       </p>
       <p>
         Prices: <strong>ethanol/corn/RBOB/nat gas</strong> from CBOT + NYMEX front-month
