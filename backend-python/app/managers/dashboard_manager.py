@@ -368,16 +368,20 @@ class DashboardManager:
         ]
         regulatory = [
             {
-                "label": "D6 RIN Value",
+                "label": "D6 RIN value (captured at blending)",
                 "kind": "regulatory",
                 "value_per_bushel": comp.d6_rin_value,
                 "included": comp.rin_included,
                 "tooltip": (
-                    "Approximate market value of the D6 compliance credit associated "
-                    "with the ethanol output from one bushel of corn, using EPA RIN "
-                    "transaction-price data. Shown as a regulatory-value equivalent "
-                    "for scale; it is not assumed to be direct producer operating "
-                    "revenue."
+                    "Market value of the D6 RIN generated per gallon of ethanol "
+                    "blended into gasoline, scaled up by the CARD dry-mill yield "
+                    "(2.8 gal/bu). The RIN is captured by the blender/refiner at "
+                    "the point of blending — the ethanol producer does not "
+                    "receive this value directly. Pass-through from RIN prices "
+                    "to producer/corn economics is empirically small (blend wall "
+                    "and inelastic short-run production) and is out of scope for "
+                    "this dashboard. Shown here for scale of the RFS compliance "
+                    "market attached to qualifying corn ethanol production."
                 ),
             },
         ]
