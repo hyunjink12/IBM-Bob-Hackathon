@@ -1,8 +1,17 @@
+import { Analytics } from '@vercel/analytics/react'
 import { DashboardView } from './views/DashboardView.jsx'
 import './styles/dashboard-dark.css'
 
 function App() {
-  return <DashboardView />
+  return (
+    <>
+      <DashboardView />
+      {/* Vercel Analytics — auto-disabled in dev, fires page + custom events
+          from the deployed origin. No config needed; picks up the project
+          from the Vercel-injected env at build time. */}
+      <Analytics />
+    </>
+  )
 }
 
 export default App
