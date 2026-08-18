@@ -38,6 +38,44 @@
     monospace;
 }
 
+/* ------------------------------------------------------------------ */
+/* Light theme — warm eggwhite background, cream-orange accent.        */
+/* Activated by setting `data-theme="light"` on <html>. Same token     */
+/* names as the dark defaults above so no consumer needs to change.    */
+/* ------------------------------------------------------------------ */
+:root[data-theme="light"] {
+  --bg-page: #f7f5ef;         /* eggwhite — warmer than pure white */
+  --bg-panel: #ffffff;        /* pure white cards on eggwhite = subtle shading */
+  --bg-card: #ffffff;
+  --bg-inset: #f0eee7;
+  --bg-hover: #efece4;
+
+  --border-subtle: #e0dcd0;
+  --border-strong: #c8c3b3;
+
+  --text-primary: #1c1a15;
+  --text-secondary: #605c53;
+  --text-tertiary: #8b867a;
+
+  /* Cream-orange replaces the blue accent — warm burnt-orange with
+     enough saturation to carry visual weight on white cards. */
+  --accent: #d97742;
+  --accent-strong: #b0521c;
+  --accent-bg: #fbecdd;
+
+  --pos: #3e8b56;             /* darkened for contrast on white */
+  --pos-strong: #2d7042;
+  --pos-bg: #e5f3e9;
+
+  --warn: #b78528;
+  --warn-strong: #96691b;
+  --warn-bg: #fbf1d9;
+
+  --neg: #b74d4d;
+  --neg-strong: #9e3939;
+  --neg-bg: #fae5e5;
+}
+
 .dashboard {
   min-height: 100vh;
   background: var(--bg-page);
@@ -182,6 +220,24 @@
 .dashboard__controls select:hover,
 .dashboard__controls button:hover {
   border-color: var(--accent);
+}
+
+/* Icon-only theme toggle — square, same height as Refresh so the two
+   controls line up visually. Icon inherits current text color via
+   currentColor so it swaps automatically with the theme. */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  color: var(--accent);
 }
 
 .dashboard__grid {
@@ -780,8 +836,8 @@
 /* Regulatory (D6 RIN value) uses a distinct blue tone so it visually reads
    as a separate LAYER, not another revenue bar. Never green (would imply
    producer revenue) and never red (would imply cost). */
-.composition__row.is-regulatory .composition__bar { background: #4589ff; }
-.composition__row.is-regulatory .composition__value { color: #6ba6ff; }
+.composition__row.is-regulatory .composition__bar { background: var(--accent); }
+.composition__row.is-regulatory .composition__value { color: var(--accent); }
 
 /* Small uppercase eyebrow between the physical-driver rows and the
    regulatory-value row so the two categories don't read as a single list. */

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useDashboardViewModel } from '../viewmodels/dashboard_view_model.js'
 import { DashboardApiClient } from '../managers/dashboard_api_client.js'
 import { SeedDataWarningBanner } from '../components/SeedDataWarningBanner.jsx'
+import { ThemeToggle } from '../components/ThemeToggle.jsx'
 import { BriefingStrip } from './BriefingStrip.jsx'
 import { ChartControls } from './ChartControls.jsx'
 import { DashboardTabs } from './DashboardTabs.jsx'
@@ -84,6 +85,7 @@ export function DashboardView() {
           <button type="button" onClick={refresh}>
             Refresh
           </button>
+          <ThemeToggle />
         </div>
       </header>
 
