@@ -170,9 +170,12 @@ cd backend-python
 
 ## Deploy (public demo)
 
-- **Frontend**: Vercel — set `VITE_API_BASE_URL` to the backend URL.
-- **Backend**: Railway / Render / Fly.io with persistent volume for `backend-python/data/`.
-- Copy `backend-python/.env.example` → `.env` and set `APP_EIA_API_KEY`, `APP_ADMIN_TOKEN`, and (for the briefing strip) `APP_WATSONX_API_KEY`, `APP_WATSONX_PROJECT_ID`.
+- **Frontend**: Vercel — root directory `client-react-vite/`. Set `VITE_API_BASE_URL` to the backend URL (no trailing slash).
+- **Backend**: Railway — repo picks up `railway.json` + `backend-python/Dockerfile` automatically.
+  1. In Railway → **Volumes** → attach a volume to the service and set the mount path to `/data`.
+  2. In **Variables**, set `APP_EIA_API_KEY`, `APP_ADMIN_TOKEN`, `APP_WATSONX_API_KEY`, `APP_WATSONX_PROJECT_ID`. `APP_DATA_DIR=/data` is already baked into the Dockerfile.
+  3. After first deploy, drop a fresh EPA D6 CSV into the volume at `/data/epa/rin_prices.csv` (Railway CLI: `railway run --service backend -- bash -c "cat > /data/epa/rin_prices.csv" < rin_prices.csv`). The DuckDB file lives beside it at `/data/ethanol_dashboard.duckdb` and persists across redeploys.
+- Overrides: `APP_DUCKDB_PATH` and `APP_EPA_RIN_CSV_PATH` still work if you want to relocate individual files.
 
 ## Config
 
@@ -182,7 +185,7 @@ cd backend-python
 | `config/wasde_schedule.json` | USDA-published WASDE release dates (see caveat below) |
 | `client-react-vite/src/config/dashboard_config.js` | Z-score window, chart range, tooltips |
 | `backend-python/.env` | Secrets only (EIA key, admin token, watsonx credentials) |
-| `backend-python/data/epa/rin_prices.csv` | EPA D6 RIN weekly prices — **overwrite weekly** (see "Refreshing D6 RIN prices" above) |
+| `backend-python/data/epa/rin_prices.csv` | EPA D6 RIN weekly prices — **overwrite weekly** (see "Refreshing D6 RIN prices" above). In prod, lives at `$APP_DATA_DIR/epa/rin_prices.csv` on the mounted volume. |
 
 ## Data caveats
 
