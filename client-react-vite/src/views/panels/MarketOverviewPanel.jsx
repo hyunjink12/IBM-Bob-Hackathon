@@ -2,7 +2,17 @@
  * Panel 1 — latest market snapshot with per-series staleness.
  */
 
+import { useRef, useState } from 'react'
+
 const STALE_AFTER_DAYS = 7  // series with age_days >= this get a "stale" badge (matches backend tape)
+
+/** "2026-07-30" → "Jul 30, 2026" for the sparkline hover tooltip + axis labels. */
+function formatShortDate(iso) {
+  if (!iso) return ''
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
 
 /** "2026-07-30T13:19:30.897263-04:00" → "Jul 30, 2026, 1:19 PM ET" */
 function formatTimestamp(iso) {
@@ -39,9 +49,13 @@ function daysSince(iso) {
 /**
  * Weekly-downsampled sparkline of the blender's advantage over the last year.
  * Zero axis is drawn as a subtle horizontal line so the sign of the spread
- * reads at a glance. Latest point gets a filled dot.
+ * reads at a glance. Hovering surfaces the underlying date + value via a
+ * crosshair; static labels at the axis ends anchor the time span.
  */
 function BlenderAdvantageSparkline({ series }) {
+  const wrapRef = useRef(null)
+  const [hoverIdx, setHoverIdx] = useState(null)
+
   if (!series || series.length < 2) return null
   const values = series.map((p) => p.value)
   const min = Math.min(...values, 0)
@@ -70,35 +84,108 @@ function BlenderAdvantageSparkline({ series }) {
     `${linePath} L${points[points.length - 1].x.toFixed(1)},${areaBase.toFixed(1)}` +
     ` L${points[0].x.toFixed(1)},${areaBase.toFixed(1)} Z`
 
+  // clientX → data index. SVG uses preserveAspectRatio="none" so the SVG's
+  // internal x-scale matches the container's CSS width 1:1 in normalized
+  // form — divide the mouse offset by container width to get the fraction.
+  const handleMove = (event) => {
+    const rect = wrapRef.current?.getBoundingClientRect()
+    if (!rect || rect.width === 0) return
+    const rel = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width))
+    setHoverIdx(Math.round(rel * (series.length - 1)))
+  }
+  const handleLeave = () => setHoverIdx(null)
+
+  const hoverPoint = hoverIdx != null ? points[hoverIdx] : null
+  const hoverDatum = hoverIdx != null ? series[hoverIdx] : null
+  // Tooltip anchor: percentage across the container. Flip to the left side
+  // when the cursor is past the midpoint so the tooltip never runs off-screen.
+  const hoverPct = hoverIdx != null ? (hoverIdx / (series.length - 1)) * 100 : 0
+  const tooltipSide = hoverPct > 60 ? 'right' : 'left'
+
+  const firstDate = series[0]?.date
+  const lastDate = series[series.length - 1]?.date
+
   return (
-    <svg
-      className="blending-card__sparkline"
-      viewBox={`0 0 ${VW} ${VH}`}
-      preserveAspectRatio="none"
-      aria-hidden="true"
-    >
-      <defs>
-        <linearGradient id="blenderAdvGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#4589ff" stopOpacity="0.35" />
-          <stop offset="100%" stopColor="#4589ff" stopOpacity="0.02" />
-        </linearGradient>
-      </defs>
-      {zeroY >= pad.t && zeroY <= pad.t + iH && (
-        <line
-          x1={pad.l} y1={zeroY} x2={pad.l + iW} y2={zeroY}
-          stroke="#3a4a63" strokeWidth="0.6" strokeDasharray="3,3"
-        />
-      )}
-      <path d={areaPath} fill="url(#blenderAdvGrad)" stroke="none" />
-      <path
-        d={linePath}
-        fill="none"
-        stroke="#4589ff"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <div className="blending-card__spark-wrap">
+      <div
+        ref={wrapRef}
+        className="blending-card__spark-hit"
+        onPointerMove={handleMove}
+        onPointerLeave={handleLeave}
+      >
+        <svg
+          className="blending-card__sparkline"
+          viewBox={`0 0 ${VW} ${VH}`}
+          preserveAspectRatio="none"
+          aria-label="Blender advantage over the last year"
+          role="img"
+        >
+          <defs>
+            <linearGradient id="blenderAdvGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#4589ff" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="#4589ff" stopOpacity="0.02" />
+            </linearGradient>
+          </defs>
+          {zeroY >= pad.t && zeroY <= pad.t + iH && (
+            <line
+              x1={pad.l} y1={zeroY} x2={pad.l + iW} y2={zeroY}
+              stroke="#3a4a63" strokeWidth="0.6" strokeDasharray="3,3"
+            />
+          )}
+          <path d={areaPath} fill="url(#blenderAdvGrad)" stroke="none" />
+          <path
+            d={linePath}
+            fill="none"
+            stroke="#4589ff"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {hoverPoint && (
+            <line
+              x1={hoverPoint.x} y1={pad.t}
+              x2={hoverPoint.x} y2={pad.t + iH}
+              stroke="#6b8bb5" strokeWidth="0.6"
+              vectorEffect="non-scaling-stroke"
+            />
+          )}
+        </svg>
+        {hoverPoint && (
+          // Dot rendered as HTML rather than <circle> inside the SVG:
+          // preserveAspectRatio="none" stretches SVG circles into ellipses,
+          // and vectorEffect only fixes strokes. Position is expressed as
+          // a % of the SVG's own viewBox dimensions so the dot lines up
+          // exactly with the crosshair line (which is also in viewBox coords)
+          // — using raw hoverPct here would drift by ~pad.l/VW at the edges.
+          <div
+            className="blending-card__spark-dot"
+            style={{
+              left: `${(hoverPoint.x / VW) * 100}%`,
+              top: `${(hoverPoint.y / VH) * 100}%`,
+            }}
+          />
+        )}
+        {hoverDatum && (
+          <div
+            className={`blending-card__spark-tooltip blending-card__spark-tooltip--${tooltipSide}`}
+            style={{ left: `${hoverPct}%` }}
+          >
+            <div className="blending-card__spark-tooltip-date">
+              {formatShortDate(hoverDatum.date)}
+            </div>
+            <div className="blending-card__spark-tooltip-value">
+              {hoverDatum.value >= 0 ? '+' : '−'}$
+              {Math.abs(hoverDatum.value).toFixed(2)}
+              <span className="blending-card__spark-tooltip-unit">/gal</span>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="blending-card__spark-axis" aria-hidden="true">
+        <span>{formatShortDate(firstDate)}</span>
+        <span>{formatShortDate(lastDate)}</span>
+      </div>
+    </div>
   )
 }
 
