@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from app.clients.eia_client import EiaClient
+from app.clients.epa_rin_file_client import EpaRinFileClient
 from app.clients.watsonx_client import WatsonxClient
 from app.core.app_settings import AppSettings
 from app.managers.briefing_manager import BriefingManager
@@ -15,6 +16,39 @@ from app.storage.duckdb_repository import DuckDbRepository
 
 _runtime_settings: AppSettings | None = None
 _repository: DuckDbRepository | None = None
+
+
+def _backend_root() -> Path:
+    """Repo path for `backend-python/`, used to resolve relative defaults."""
+    return Path(__file__).resolve().parents[2]
+
+
+def resolve_data_dir(settings: AppSettings) -> Path:
+    """
+    Root directory for persistent state (DuckDB + EPA file-drop).
+
+    When APP_DATA_DIR is set (Railway volume, Docker mount), use it verbatim.
+    Otherwise fall back to `backend-python/data` for local dev.
+    """
+    if settings.data_dir:
+        return Path(settings.data_dir).expanduser().resolve()
+    return _backend_root() / "data"
+
+
+def resolve_duckdb_path(settings: AppSettings) -> Path:
+    """DuckDB file path, honoring explicit override then falling back to data_dir."""
+    if settings.duckdb_path:
+        db_path = Path(settings.duckdb_path).expanduser()
+        return db_path.resolve() if db_path.is_absolute() else (_backend_root() / db_path).resolve()
+    return resolve_data_dir(settings) / "ethanol_dashboard.duckdb"
+
+
+def resolve_epa_rin_csv_path(settings: AppSettings) -> Path:
+    """EPA D6 RIN CSV path, honoring override then falling back to data_dir/epa."""
+    if settings.epa_rin_csv_path:
+        csv_path = Path(settings.epa_rin_csv_path).expanduser()
+        return csv_path.resolve() if csv_path.is_absolute() else (_backend_root() / csv_path).resolve()
+    return resolve_data_dir(settings) / "epa" / "rin_prices.csv"
 
 
 def configure_runtime(settings: AppSettings) -> None:
@@ -45,10 +79,8 @@ def get_repository() -> DuckDbRepository:
     global _repository
     if _repository is None:
         settings = get_settings()
-        db_path = Path(settings.duckdb_path)
-        if not db_path.is_absolute():
-            backend_root = Path(__file__).resolve().parents[2]
-            db_path = (backend_root / db_path).resolve()
+        db_path = resolve_duckdb_path(settings)
+        db_path.parent.mkdir(parents=True, exist_ok=True)
         _repository = DuckDbRepository(db_path)
     return _repository
 
@@ -57,10 +89,15 @@ def build_ingestion_manager() -> MarketDataIngestionManager:
     """Construct the ingestion pipeline with configured clients."""
     settings = get_settings()
     crush_config = resolve_crush_config(settings)
+    epa_csv_path = resolve_epa_rin_csv_path(settings)
+    # Ensure the EPA drop directory exists so mentors can `scp` a CSV in
+    # without first creating the folder.
+    epa_csv_path.parent.mkdir(parents=True, exist_ok=True)
     return MarketDataIngestionManager(
         repository=get_repository(),
         crush_config=crush_config,
         eia_client=EiaClient(settings.eia_api_key),
+        epa_rin_client=EpaRinFileClient(csv_path=epa_csv_path),
     )
 
 

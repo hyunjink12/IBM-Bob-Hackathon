@@ -13,14 +13,16 @@ services:
       - ./backend-python/.env
     environment:
       APP_ENV: development
-      APP_DUCKDB_PATH: /app/data/ethanol_dashboard.duckdb
+      # Persist DuckDB + EPA CSVs to the bind mount below. Same env var Railway
+      # uses in prod — code path doesn't branch on deployment target.
+      APP_DATA_DIR: /data
       APP_CRUSH_MODEL_PATH: /app/config/crush_model.json
       PYTHONUNBUFFERED: "1"
     volumes:
       # Bind-mount app code so uvicorn --reload picks up edits on both OSes.
       - ./backend-python/app:/app/app
       - ./config:/app/config:ro
-      - ./backend-python/data:/app/data
+      - ./backend-python/data:/data
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     healthcheck:
       test:

@@ -8,7 +8,12 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
-RUN mkdir -p /app/data
+
+# Persistent state lives under /data so a mounted volume (Railway, docker-compose
+# bind mount, k8s PVC) survives redeploys. APP_DATA_DIR points the app at it;
+# code creates the DuckDB file + epa/ subdir on first boot.
+ENV APP_DATA_DIR=/data
+RUN mkdir -p /data/epa
 
 EXPOSE 8000
 
