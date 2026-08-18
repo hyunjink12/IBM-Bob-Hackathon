@@ -85,6 +85,9 @@ def get_repository() -> DuckDbRepository:
     return _repository
 
 
+_EPA_SEED_DIR = Path("/app/seed_data/epa")
+
+
 def build_ingestion_manager() -> MarketDataIngestionManager:
     """Construct the ingestion pipeline with configured clients."""
     settings = get_settings()
@@ -93,6 +96,15 @@ def build_ingestion_manager() -> MarketDataIngestionManager:
     # Ensure the EPA drop directory exists so mentors can `scp` a CSV in
     # without first creating the folder.
     epa_csv_path.parent.mkdir(parents=True, exist_ok=True)
+    # First-boot seed: if the volume's EPA CSV is missing, copy the snapshot
+    # baked into the image at build time. Lets a fresh Railway deploy come up
+    # with real RIN prices before the user runs their first weekly CSV update.
+    if not epa_csv_path.exists() and _EPA_SEED_DIR.exists():
+        import shutil
+        for seed_file in _EPA_SEED_DIR.iterdir():
+            target = epa_csv_path.parent / seed_file.name
+            if not target.exists():
+                shutil.copy2(seed_file, target)
     return MarketDataIngestionManager(
         repository=get_repository(),
         crush_config=crush_config,

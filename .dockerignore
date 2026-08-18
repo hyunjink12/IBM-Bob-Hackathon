@@ -21,8 +21,11 @@ client-react-vite/.vite
 # Secrets and local state — never bake into an image
 **/.env
 **/.env.*
-backend-python/data
-!backend-python/data/.gitkeep
+# Exclude the local DuckDB file + WAL sidecars, but keep the EPA seed CSVs
+# so the image can bootstrap a fresh Railway volume on first boot.
+backend-python/data/*.duckdb
+backend-python/data/*.duckdb.wal
+backend-python/data/*.pre_rin_backup
 
 # Editor / OS junk
 **/.DS_Store

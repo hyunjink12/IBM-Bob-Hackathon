@@ -13,6 +13,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend-python/app ./app
 COPY config ./config
 
+# Ship the EPA D6 RIN CSV inside the image as a seed. On first boot, if the
+# mounted volume's epa/ dir is empty, code copies this seed onto the volume
+# so a fresh Railway deploy has real RIN prices without any manual CLI upload.
+# Subsequent CSV refreshes overwrite the volume file (see README).
+COPY backend-python/data/epa /app/seed_data/epa
+
 # Persistent state lives under /data so a mounted volume (Railway, docker-compose
 # bind mount, k8s PVC) survives redeploys. APP_DATA_DIR points the app at it;
 # code creates the DuckDB file + epa/ subdir on first boot.
