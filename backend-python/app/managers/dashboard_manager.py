@@ -118,7 +118,11 @@ class DashboardManager:
             "d6_rin",
             SERIES_D6_RIN,
             "d6_rin_usd_per_gallon",
-            "$/gal",
+            # Market instrument is a RIN, not a gallon. For corn ethanol the
+            # ethanol-equivalent value is 1.0 so the numeric conversion is a
+            # no-op, but the unit label must name the traded instrument. The
+            # regulatory-value $/bu conversion lives in the composition panel.
+            "$/RIN",
             "EPA D6 corn ethanol RIN (weekly)",
             "D6 RIN Price",
         ),
