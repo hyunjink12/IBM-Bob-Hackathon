@@ -22,4 +22,7 @@ RUN mkdir -p /data/epa
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Bind to PORT when the host provides one (Railway, Heroku, Cloud Run), else
+# fall back to 8000 for local docker + docker-compose. Shell form is needed
+# for env-var expansion; exec form would treat ${PORT} as a literal string.
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
