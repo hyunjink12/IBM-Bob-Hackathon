@@ -17,6 +17,30 @@ from app.storage.duckdb_repository import DuckDbRepository
 
 _logger = logging.getLogger(__name__)
 
+
+def _friendly_watsonx_error(exc: Exception) -> str:
+    """
+    Translate a raw watsonx.ai exception into a short, user-facing string.
+
+    The client raises ``RuntimeError("watsonx.ai API error 429: {...raw JSON...}")``
+    on API failures. Dumping that verbatim into the UI leaks a JSON blob into
+    the briefing chip — not what a mentor viewing the dashboard should see.
+    Full detail still goes to the server log via the caller's ``_logger.warning``.
+    """
+    raw = str(exc)
+    if "429" in raw:
+        if "consumption_limit_reached" in raw:
+            return (
+                "IBM Granite hit its shared free-tier concurrent request cap. "
+                "Retry in ~30 seconds."
+            )
+        return "IBM Granite is briefly rate-limited. Retry in a moment."
+    if "not configured" in raw:
+        return "Granite briefing not configured on this deployment."
+    if "401" in raw or "403" in raw:
+        return "Granite auth failed — check watsonx credentials on the server."
+    return "Granite briefing temporarily unavailable. Try again shortly."
+
 _SYSTEM_INSTRUCTIONS = """You are a senior commodity analyst writing a concise daily briefing
 for an ethanol crush trader. Write 3-5 sentences in plain, direct prose. Rules:
 - Ground every claim in the numbers provided. Do not invent figures.
@@ -104,7 +128,7 @@ class BriefingManager:
                 "as_of": context.get("as_of"),
                 "text": None,
                 "cached": False,
-                "unavailable_reason": str(exc),
+                "unavailable_reason": _friendly_watsonx_error(exc),
             }
 
         as_of = context.get("as_of")
@@ -254,7 +278,7 @@ class BriefingManager:
                 "question_id": question_id,
                 "question_label": self.PRESET_QUESTIONS[question_id],
                 "answer": None,
-                "unavailable_reason": str(exc),
+                "unavailable_reason": _friendly_watsonx_error(exc),
             }
 
         return {
