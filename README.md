@@ -110,6 +110,28 @@ D6 RIN revenue is a first-class margin driver — at current prices it's often t
 
 The `EpaRinFileClient` filters the CSV down to canonical rows (RIN Year == Transfer Year AND QAP Service Type == "Unverified") and upserts them tagged `source="epa_emts"`. Old EPA rows are replaced; existing Yahoo/EIA data is untouched. If the CSV is missing entirely, the RIN revenue line drops out of the margin composition and the RIN card shows `—`; everything else keeps working.
 
+## Blending economics
+
+The bottom of the Market Overview panel shows a derived-signal card labelled **Blending Economics**. It is not a raw price — it is the number that determines whether a refiner blends more ethanol at the margin, above and beyond the RFS mandate.
+
+**Formula:**
+
+```
+blender_advantage_$/gal  =  RBOB_$/gal  −  (ethanol_$/gal  −  D6_RIN_$/gal)
+                                            └─── effective ethanol cost ──┘
+```
+
+**Why the RIN credit is subtracted:** the refiner captures the D6 RIN when they blend the ethanol into gasoline (they can either use it toward their own RFS obligation or sell it to another obligated party). So the refiner's *effective* cost per gallon of ethanol is the physical wholesale price minus the value of the RIN they get back. At current RIN prices, this subtraction is large — a $2.60 physical ethanol print net of a $1.99 D6 RIN gives an effective cost of $0.61/gal, well below RBOB.
+
+**Interpretation:**
+
+- **Positive advantage** → ethanol is a cheaper blendstock than gasoline after RIN credit → refiners push blend rates up toward the E10/E15 ceiling.
+- **Negative advantage** → ethanol is more expensive than the RBOB it displaces → refiners blend only to hit the RFS mandate floor.
+
+**Regime bands (`indifference_band_usd_per_gallon`):** the card labels regimes as *Blenders favor ethanol / Blend indifference / Blenders resist ethanol* using a placeholder ±$0.30/gal indifference band around zero. **This threshold is not derived from a historical distribution of the spread** — it is a reasonable-magnitude guess based on typical blending logistics cost. A serious desk would replace it with the 20th/80th percentile of the historical `blender_advantage` series (same pattern as the warning rules). Tune the constant `_BLENDING_INDIFFERENCE_BAND_USD` in `backend-python/app/managers/dashboard_manager.py` if you have a better anchor.
+
+**Known simplifications:** the calculation uses front-month CBOT RBOB and CME EH ethanol — not physical rack prices at a specific terminal. A real desk would layer in freight to the blending point, denaturant cost (~$0.05–0.10/gal), and terminal-specific basis. The current number is a national indicative signal, not a specific blender's P&L.
+
 ## Crush margin formulas
 
 The dashboard displays two related but different numbers. Know which one you're looking at.
