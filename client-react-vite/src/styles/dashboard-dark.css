@@ -773,6 +773,36 @@
 .composition__row.is-revenue .composition__value { color: var(--pos-strong); }
 .composition__row.is-cost    .composition__value { color: var(--neg-strong); }
 
+/* Regulatory (D6 RIN value) uses a distinct blue tone so it visually reads
+   as a separate LAYER, not another revenue bar. Never green (would imply
+   producer revenue) and never red (would imply cost). */
+.composition__row.is-regulatory .composition__bar { background: #4589ff; }
+.composition__row.is-regulatory .composition__value { color: #6ba6ff; }
+
+/* Small uppercase eyebrow between the physical-driver rows and the
+   regulatory-value row so the two categories don't read as a single list. */
+.composition__section-label {
+  margin-top: 0.15rem;
+  color: var(--text-tertiary);
+  font-size: 0.68rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.composition__divider {
+  margin-top: 0.35rem;
+  border-top: 1px dashed var(--border-subtle);
+}
+
+.composition__reg-note {
+  margin: 0.35rem 0 0;
+  color: var(--text-tertiary);
+  font-size: 0.68rem;
+  line-height: 1.4;
+  font-style: italic;
+}
+
 /* Panel legend — used to explain non-obvious color conventions
    (e.g. COT deltas colored by market impact, not arithmetic sign). */
 .panel__legend {
