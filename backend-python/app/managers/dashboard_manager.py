@@ -333,8 +333,11 @@ class DashboardManager:
 
         Casual: 'what's making up today's margin.'
 
-        Needs the merged_daily row (prices) not the ComputedMarginRow, so we
-        look up the merge for latest.obs_date and re-run the decomposition.
+        Groups drivers into `physical_components` (crush P&L levers that sum
+        to plant_operating_margin) and `regulatory_components` (D6 RIN value,
+        shown separately because it is a compliance-market value, not
+        producer operating revenue). Legacy `components` list retained for
+        backward-compat with any consumer still reading the flat array.
         """
         if latest is None:
             return None
@@ -346,28 +349,44 @@ class DashboardManager:
         comp = self._margin_calculator.decompose(merged_rows[0])
         if comp is None:
             return None
+        physical = [
+            {"label": "Ethanol revenue", "kind": "revenue", "value_per_bushel": comp.ethanol_revenue},
+            {"label": "DDGS revenue", "kind": "revenue", "value_per_bushel": comp.ddgs_revenue},
+            {
+                "label": "Corn oil revenue",
+                "kind": "revenue",
+                "value_per_bushel": comp.corn_oil_revenue,
+                "included": comp.corn_oil_included,
+            },
+            {"label": "Corn cost", "kind": "cost", "value_per_bushel": comp.corn_cost},
+            {"label": "Natural gas cost", "kind": "cost", "value_per_bushel": comp.nat_gas_cost},
+            {"label": "Misc opex", "kind": "cost", "value_per_bushel": comp.misc_opex_cost},
+        ]
+        regulatory = [
+            {
+                "label": "D6 RIN Value",
+                "kind": "regulatory",
+                "value_per_bushel": comp.d6_rin_value,
+                "included": comp.rin_included,
+                "tooltip": (
+                    "Approximate market value of the D6 compliance credit associated "
+                    "with the ethanol output from one bushel of corn, using EPA RIN "
+                    "transaction-price data. Shown as a regulatory-value equivalent "
+                    "for scale; it is not assumed to be direct producer operating "
+                    "revenue."
+                ),
+            },
+        ]
+        plant_operating_margin = sum(item["value_per_bushel"] for item in physical)
         return {
             "as_of": latest.obs_date.isoformat(),
             "margin_per_bushel": latest.margin_per_bushel,
-            "components": [
-                {"label": "Ethanol revenue", "kind": "revenue", "value_per_bushel": comp.ethanol_revenue},
-                {"label": "DDGS revenue", "kind": "revenue", "value_per_bushel": comp.ddgs_revenue},
-                {
-                    "label": "Corn oil revenue",
-                    "kind": "revenue",
-                    "value_per_bushel": comp.corn_oil_revenue,
-                    "included": comp.corn_oil_included,
-                },
-                {
-                    "label": "D6 RIN revenue",
-                    "kind": "revenue",
-                    "value_per_bushel": comp.rin_revenue,
-                    "included": comp.rin_included,
-                },
-                {"label": "Corn cost", "kind": "cost", "value_per_bushel": comp.corn_cost},
-                {"label": "Natural gas cost", "kind": "cost", "value_per_bushel": comp.nat_gas_cost},
-                {"label": "Misc opex", "kind": "cost", "value_per_bushel": comp.misc_opex_cost},
-            ],
+            "plant_operating_margin_per_bushel": plant_operating_margin,
+            "d6_rin_value_per_bushel": comp.d6_rin_value,
+            "rin_included": comp.rin_included,
+            "physical_components": physical,
+            "regulatory_components": regulatory,
+            "components": physical + regulatory,   # legacy flat list
         }
 
     def get_spread(
