@@ -4,8 +4,11 @@
 services:
   backend:
     build:
-      context: ./backend-python
-      dockerfile: Dockerfile
+      # Repo root context so the Dockerfile can COPY both backend-python/ and
+      # the sibling config/ dir. Keeps compose and Railway building the same
+      # image out of the same context.
+      context: .
+      dockerfile: backend-python/Dockerfile
     container_name: corn-ethanol-backend
     ports:
       - "8000:8000"

@@ -1,0 +1,40 @@
+# Ignored when the backend Dockerfile builds from the repo root context.
+# Keeps the upload small and stops absolute symlinks in .venv from tripping
+# BuildKit's checksum stage on Railway.
+
+# Python / venv
+**/__pycache__
+**/*.py[cod]
+**/*.pyo
+**/.venv
+**/venv
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+
+# Node / frontend build output — the backend image never needs these
+client-react-vite/node_modules
+client-react-vite/dist
+client-react-vite/.vite
+**/node_modules
+
+# Secrets and local state — never bake into an image
+**/.env
+**/.env.*
+backend-python/data
+!backend-python/data/.gitkeep
+
+# Editor / OS junk
+**/.DS_Store
+**/*.swp
+
+# VCS + tooling
+.git
+.gitignore
+.github
+.claude
+.vscode
+.idea
+
+# Docs — not needed at runtime
+*.md
