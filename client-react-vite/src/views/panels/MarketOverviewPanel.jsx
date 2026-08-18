@@ -69,7 +69,6 @@ function BlenderAdvantageSparkline({ series }) {
   const areaPath =
     `${linePath} L${points[points.length - 1].x.toFixed(1)},${areaBase.toFixed(1)}` +
     ` L${points[0].x.toFixed(1)},${areaBase.toFixed(1)} Z`
-  const latest = points[points.length - 1]
 
   return (
     <svg
@@ -99,7 +98,6 @@ function BlenderAdvantageSparkline({ series }) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx={latest.x} cy={latest.y} r="2.6" fill="#4589ff" />
     </svg>
   )
 }
@@ -156,9 +154,37 @@ export function MarketOverviewPanel({ overview }) {
           )
         })}
         <WasdeCard wasde={overview.wasde} />
+        <RbobCard blending={overview.blending_economics} />
+        <BlendingEconomicsCard blending={overview.blending_economics} />
       </div>
-      <BlendingEconomicsCard blending={overview.blending_economics} />
     </section>
+  )
+}
+
+/**
+ * RBOB gasoline card, rendered in the metric grid alongside the blending
+ * economics span. Value comes from the blending payload (see backend note in
+ * OVERVIEW_SERIES about why RBOB isn't a crush input).
+ */
+function RbobCard({ blending }) {
+  if (!blending) return null
+  const age = daysSince(blending.rbob_last_updated)
+  const isStale = age != null && age >= STALE_AFTER_DAYS
+  return (
+    <article className={`metric-card${isStale ? ' metric-card--stale' : ''}`}>
+      <div className="metric-card__label-row">
+        <h3>RBOB</h3>
+        {isStale && <span className="metric-card__stale-badge">{age}d stale</span>}
+      </div>
+      <p className="metric-card__value">
+        {blending.rbob_usd_per_gallon.toFixed(2)}
+        <span className="metric-card__unit">$/gal</span>
+      </p>
+      <p className="metric-card__description">NYMEX RBOB futures — ethanol&rsquo;s blendstock competitor</p>
+      <p className="metric-card__updated">
+        Updated {formatTimestamp(blending.rbob_last_updated) ?? 'unknown'}
+      </p>
+    </article>
   )
 }
 
