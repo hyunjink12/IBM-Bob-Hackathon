@@ -450,7 +450,10 @@ class BriefingManager:
             for row in four_week
         ]
 
-        # RIN share of current margin — the insight from the handoff, live.
+        # D6 regulatory value expressed as a ratio to the plant's physical
+        # operating margin — a compliance-market-vs-physical-margin scale
+        # comparison, NOT a claim about producer capture. Ratio can exceed
+        # 100% (correctly) when regulatory value is larger than plant P&L.
         rin_share_of_margin_pct: float | None = None
         latest_merged = self._repository.fetch_latest_merged_daily()
         latest_margin = self._repository.fetch_latest_computed_margin()
@@ -459,7 +462,7 @@ class BriefingManager:
             comp = calculator.decompose(latest_merged)
             if comp is not None and comp.rin_included:
                 rin_share_of_margin_pct = round(
-                    comp.rin_revenue / latest_margin.margin_per_bushel * 100, 1
+                    comp.d6_rin_value / latest_margin.margin_per_bushel * 100, 1
                 )
 
         return {
