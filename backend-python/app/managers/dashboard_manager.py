@@ -95,7 +95,9 @@ class DashboardManager:
         ("ethanol", SERIES_ETHANOL, "ethanol_usd_per_gallon", "$/gal", "CME EH futures (Chicago Ethanol Platts)", "Ethanol"),
         ("ddgs", SERIES_DDGS, "ddgs_usd_per_short_ton", "$/short ton", "DDGS coproduct", "DDGS"),
         ("nat_gas", SERIES_NAT_GAS, "nat_gas_usd_per_mmbtu", "$/MMBtu", "Henry Hub proxy", "Natural Gas"),
-        ("rbob", SERIES_RBOB, "rbob_usd_per_gallon", "$/gal", "RBOB gasoline futures", "RBOB"),
+        # RBOB intentionally NOT here — it isn't a direct crush model input. It
+        # surfaces in `blending_economics` on the overview payload, where it
+        # belongs conceptually (the ethanol substitute in the gasoline pool).
         (
             "ethanol_stocks",
             SERIES_ETHANOL_STOCKS,
@@ -163,12 +165,121 @@ class DashboardManager:
             )
 
         wasde = self._build_wasde_summary(latest)
+        blending = self._build_blending_economics(latest)
         return {
             "as_of": latest.obs_date.isoformat() if latest else None,
             "metrics": metrics,
             "wasde": wasde,
+            "blending_economics": blending,
             "data_provenance": self._seed_status_manager.get_status(),
         }
+
+    # Placeholder regime bands for the blender's advantage spread.
+    # $/gal; positive = ethanol favored, negative = ethanol resisted. See README
+    # "Blending economics" section for the rationale + caveat that these are
+    # not derived from a historical distribution.
+    _BLENDING_INDIFFERENCE_BAND_USD = 0.30
+
+    def _build_blending_economics(self, latest) -> dict | None:
+        """
+        Blender's advantage = RBOB − (physical ethanol − D6 RIN credit).
+
+        Casual: how much cheaper is a gallon of ethanol vs a gallon of RBOB
+        once you subtract the RIN a blender captures.
+
+        The blender captures the D6 RIN when they blend the ethanol into
+        gasoline, so their effective input cost is `ethanol_price − rin_price`.
+        Positive advantage → refiners push blend rates up (to E10/E15 limits);
+        negative → refiners resist blending beyond the RFS mandate.
+
+        Returns None when any required price leg is missing on the merged row.
+        Falls back gracefully to physical-only (RBOB − ethanol) when only the
+        RIN is missing, with `rin_included=False` so the UI can flag it.
+        """
+        if latest is None:
+            return None
+        rbob = latest.rbob_usd_per_gallon
+        ethanol = latest.ethanol_usd_per_gallon
+        if rbob is None or ethanol is None:
+            return None
+
+        rin = latest.d6_rin_usd_per_gallon
+        rin_included = rin is not None
+        effective_ethanol_cost = ethanol - (rin or 0.0)
+        blender_advantage = rbob - effective_ethanol_cost
+
+        if blender_advantage > self._BLENDING_INDIFFERENCE_BAND_USD:
+            regime_label = "Blenders favor ethanol"
+            regime_direction = "favor_ethanol"
+        elif blender_advantage < -self._BLENDING_INDIFFERENCE_BAND_USD:
+            regime_label = "Blenders resist ethanol"
+            regime_direction = "resist_ethanol"
+        else:
+            regime_label = "Blend indifference"
+            regime_direction = "indifference"
+
+        # 1-year percentile + weekly sparkline series of the same spread.
+        # Both derive from the same historical pass — recompute once, use twice.
+        percentile_1y, sample_size, sparkline = self._blender_advantage_history(
+            latest.obs_date, lookback_days=365, current_value=blender_advantage
+        )
+
+        return {
+            "as_of": latest.obs_date.isoformat(),
+            "rbob_usd_per_gallon": round(rbob, 4),
+            "ethanol_usd_per_gallon": round(ethanol, 4),
+            "d6_rin_usd_per_gallon": round(rin, 4) if rin is not None else None,
+            "effective_ethanol_cost_usd_per_gallon": round(effective_ethanol_cost, 4),
+            "blender_advantage_usd_per_gallon": round(blender_advantage, 4),
+            "regime_label": regime_label,
+            "regime_direction": regime_direction,
+            "rin_included": rin_included,
+            "indifference_band_usd_per_gallon": self._BLENDING_INDIFFERENCE_BAND_USD,
+            "percentile_1y_pct": percentile_1y,
+            "percentile_sample_size": sample_size,
+            "sparkline_1y": sparkline,
+        }
+
+    def _blender_advantage_history(
+        self,
+        as_of_date,
+        *,
+        lookback_days: int,
+        current_value: float,
+    ) -> tuple[int | None, int, list[dict]]:
+        """
+        Compute 1Y percentile + weekly-downsampled sparkline in one pass.
+
+        Returns (percentile 0-100, sample_size, weekly_series).
+        Percentile is None when history is too thin (< 30 valid days).
+        Weekly series is downsampled last-observation-of-week so it fits
+        cleanly in a small SVG (~52 points).
+        """
+        from datetime import timedelta
+        start = as_of_date - timedelta(days=lookback_days)
+        rows = self._repository.fetch_merged_daily(start, as_of_date)
+        values: list[float] = []
+        weekly_by_key: dict[tuple[int, int], tuple] = {}
+        for row in rows:
+            if row.rbob_usd_per_gallon is None or row.ethanol_usd_per_gallon is None:
+                continue
+            rin_val = row.d6_rin_usd_per_gallon or 0.0
+            advantage = row.rbob_usd_per_gallon - (row.ethanol_usd_per_gallon - rin_val)
+            values.append(advantage)
+            # ISO year+week keeps chronological order without off-by-one at year rollover
+            iso_year, iso_week, _ = row.obs_date.isocalendar()
+            weekly_by_key[(iso_year, iso_week)] = (row.obs_date, advantage)
+
+        if len(values) < 30:
+            return None, len(values), []
+
+        rank = sum(1 for v in values if v <= current_value)
+        percentile = round(rank / len(values) * 100)
+        weekly = [
+            {"date": d.isoformat(), "value": round(v, 4)}
+            for _, (d, v) in sorted(weekly_by_key.items())
+        ]
+        return percentile, len(values), weekly
 
     def get_margins(
         self,

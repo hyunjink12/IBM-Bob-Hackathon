@@ -36,6 +36,85 @@ function daysSince(iso) {
   return Math.round((todayDay.getTime() - thenDay.getTime()) / (1000 * 60 * 60 * 24))
 }
 
+/**
+ * Weekly-downsampled sparkline of the blender's advantage over the last year.
+ * Zero axis is drawn as a subtle horizontal line so the sign of the spread
+ * reads at a glance. Latest point gets a filled dot.
+ */
+function BlenderAdvantageSparkline({ series }) {
+  if (!series || series.length < 2) return null
+  const values = series.map((p) => p.value)
+  const min = Math.min(...values, 0)
+  const max = Math.max(...values, 0)
+  const range = max === min ? 1 : max - min
+
+  // Larger viewBox + preserveAspectRatio="none" so the SVG scales up to fill
+  // whatever width the parent gives it while staying at a comfortable height.
+  const VW = 400
+  const VH = 80
+  const pad = { t: 6, b: 6, l: 2, r: 2 }
+  const iW = VW - pad.l - pad.r
+  const iH = VH - pad.t - pad.b
+
+  const points = values.map((v, i) => ({
+    x: pad.l + (i / (values.length - 1)) * iW,
+    y: pad.t + iH - ((v - min) / range) * iH,
+  }))
+  const linePath = points
+    .map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+    .join(' ')
+
+  const zeroY = pad.t + iH - ((0 - min) / range) * iH
+  const areaBase = zeroY >= pad.t && zeroY <= pad.t + iH ? zeroY : pad.t + iH
+  const areaPath =
+    `${linePath} L${points[points.length - 1].x.toFixed(1)},${areaBase.toFixed(1)}` +
+    ` L${points[0].x.toFixed(1)},${areaBase.toFixed(1)} Z`
+  const latest = points[points.length - 1]
+
+  return (
+    <svg
+      className="blending-card__sparkline"
+      viewBox={`0 0 ${VW} ${VH}`}
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="blenderAdvGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#4589ff" stopOpacity="0.35" />
+          <stop offset="100%" stopColor="#4589ff" stopOpacity="0.02" />
+        </linearGradient>
+      </defs>
+      {zeroY >= pad.t && zeroY <= pad.t + iH && (
+        <line
+          x1={pad.l} y1={zeroY} x2={pad.l + iW} y2={zeroY}
+          stroke="#3a4a63" strokeWidth="0.6" strokeDasharray="3,3"
+        />
+      )}
+      <path d={areaPath} fill="url(#blenderAdvGrad)" stroke="none" />
+      <path
+        d={linePath}
+        fill="none"
+        stroke="#4589ff"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx={latest.x} cy={latest.y} r="2.6" fill="#4589ff" />
+    </svg>
+  )
+}
+
+/** English ordinal suffix: 1 → "st", 2 → "nd", 3 → "rd", else "th". Handles teens. */
+function ordinalSuffix(n) {
+  const rem100 = n % 100
+  if (rem100 >= 11 && rem100 <= 13) return 'th'
+  const rem10 = n % 10
+  if (rem10 === 1) return 'st'
+  if (rem10 === 2) return 'nd'
+  if (rem10 === 3) return 'rd'
+  return 'th'
+}
+
 /** Ethanol stocks display with 3 decimals — matches trader convention post-fix. */
 function formatValue(metric) {
   if (metric.value == null) return '—'
@@ -78,7 +157,92 @@ export function MarketOverviewPanel({ overview }) {
         })}
         <WasdeCard wasde={overview.wasde} />
       </div>
+      <BlendingEconomicsCard blending={overview.blending_economics} />
     </section>
+  )
+}
+
+/**
+ * Bottom-of-panel derived-signal card: blender's advantage after RIN credit.
+ *
+ * Casual: how much cheaper ethanol is than RBOB after the RIN gets subtracted.
+ *
+ * Positive = refiners push blend rates up. Negative = they resist. This isn't
+ * a raw price like the tiles above — it's the actual decision refiners make
+ * every day about whether to blend more ethanol. See README "Blending
+ * economics" section for the RIN-credit rationale and threshold caveat.
+ */
+function BlendingEconomicsCard({ blending }) {
+  if (!blending) return null
+  const advantage = blending.blender_advantage_usd_per_gallon
+  const sign = advantage >= 0 ? '+' : '−'
+  const magnitude = Math.abs(advantage).toFixed(2)
+  // Reuse the app-wide signal-chip vocabulary so the regime badge reads
+  // identically to the crush margin signal chip (RICH / WEAK / NORMAL).
+  const signalVariant = {
+    favor_ethanol: 'rich',
+    resist_ethanol: 'weak',
+    indifference: 'normal',
+  }[blending.regime_direction] || 'normal'
+  const regimeChipText = {
+    favor_ethanol: 'FAVOR ETHANOL',
+    resist_ethanol: 'RESIST ETHANOL',
+    indifference: 'INDIFFERENT',
+  }[blending.regime_direction] || blending.regime_label
+  return (
+    <article className="blending-card">
+      <div className="blending-card__header">
+        <h3>Blending Economics</h3>
+      </div>
+      <div className="blending-card__body">
+        <div className="blending-card__value-block">
+          <p className="blending-card__value">
+            {sign}${magnitude}
+            <span className="blending-card__unit">/gal</span>
+          </p>
+          <p className="blending-card__caption">
+            blender&rsquo;s advantage after RIN credit
+          </p>
+          <span className={`signal signal--${signalVariant} blending-card__regime-inline`}>
+            {regimeChipText}
+          </span>
+        </div>
+        {blending.percentile_1y_pct != null && blending.sparkline_1y?.length > 1 && (
+          <div className="blending-card__spark-block">
+            <BlenderAdvantageSparkline series={blending.sparkline_1y} />
+            <p className="blending-card__spark-caption">
+              <strong className="blending-card__percentile-inline">
+                {blending.percentile_1y_pct}
+                <span className="blending-card__percentile-suffix">
+                  {ordinalSuffix(blending.percentile_1y_pct)}
+                </span>
+              </strong>
+              {' '}percentile · trailing 1Y
+            </p>
+          </div>
+        )}
+      </div>
+      <div className="blending-card__footer">
+        <span>
+          RBOB <strong>${blending.rbob_usd_per_gallon.toFixed(2)}</strong>
+        </span>
+        <span className="blending-card__op">·</span>
+        <span>
+          ethanol <strong>${blending.ethanol_usd_per_gallon.toFixed(2)}</strong>
+        </span>
+        {blending.rin_included && (
+          <>
+            <span className="blending-card__op">·</span>
+            <span>
+              D6 RIN <strong>${blending.d6_rin_usd_per_gallon.toFixed(2)}</strong>
+            </span>
+          </>
+        )}
+        {!blending.rin_included && (
+          <span className="blending-card__no-rin">(RIN unavailable — physical spread only)</span>
+        )}
+      </div>
+    </article>
   )
 }
 

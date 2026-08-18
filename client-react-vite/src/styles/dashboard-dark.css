@@ -259,6 +259,169 @@
   background: #14100a;
 }
 
+/* Blending economics — derived-signal card, centered under the metric grid.
+   Card is narrower than the panel and margin-auto centered so header, body,
+   and footer all share the same left edge and read as one composed block.
+   See README "Blending economics" section. */
+.blending-card {
+  margin: 0.75rem auto 0;
+  max-width: 720px;
+  padding: 0.7rem 0.9rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+}
+
+.blending-card__header {
+  margin-bottom: 0.4rem;
+}
+
+.blending-card__header h3 {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Regime chip now reuses the app-wide `.signal .signal--*` classes so the
+   visual language matches the crush margin signal exactly. No custom styling
+   here — keeps the vocabulary consistent across the dashboard. */
+
+.blending-card__body {
+  display: grid;
+  grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+  align-items: center;
+  gap: 1.5rem;
+  /* No max-width here — the outer .blending-card handles the composed width,
+     so header / body / footer all share the same left edge. */
+}
+
+@media (max-width: 780px) {
+  .blending-card__body {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+  .blending-card {
+    max-width: none;             /* fill available width on mobile */
+  }
+}
+
+/* Right side: 1Y sparkline + inline percentile caption. */
+.blending-card__spark-block {
+  text-align: center;
+  min-width: 0;
+  padding-left: 1.25rem;
+  border-left: 1px solid var(--border-subtle);
+}
+
+@media (max-width: 780px) {
+  .blending-card__spark-block {
+    border-left: none;
+    border-top: 1px solid var(--border-subtle);
+    padding-left: 0;
+    padding-top: 0.75rem;
+  }
+}
+
+.blending-card__sparkline {
+  display: block;
+  width: 100%;
+  height: 52px;
+  margin-bottom: 0.35rem;
+}
+
+/* Regime chip pulled from the top-right header down into the value block —
+   sits directly under the caption so it visually anchors to the value. */
+.blending-card__regime-inline {
+  margin-top: 0.5rem;
+  align-self: flex-start;
+}
+
+.blending-card__percentile-caption,
+.blending-card__spark-caption {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.blending-card__percentile-inline {
+  color: var(--accent);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.blending-card__percentile-suffix {
+  margin-left: 0.05rem;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+}
+
+.blending-card__value-block {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.blending-card__value {
+  margin: 0;
+  font-size: 1.55rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.blending-card__unit {
+  margin-left: 0.25rem;
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--text-tertiary);
+}
+
+.blending-card__caption {
+  margin: 0.3rem 0 0;
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+/* Subtle footer row showing the component prices — secondary info,
+   auditable but not competing with the headline value. */
+.blending-card__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 0.45rem;
+  margin-top: 0.6rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+
+.blending-card__footer strong {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.blending-card__op {
+  color: var(--text-tertiary);
+  opacity: 0.5;
+}
+
+.blending-card__no-rin {
+  color: var(--warn-strong, #f0a878);
+  font-family: var(--font-sans);
+  font-style: italic;
+}
+
 .metric-card__label-row {
   display: flex;
   align-items: center;
@@ -1023,10 +1186,12 @@
   font-size: 0.68rem;
 }
 
-/* Two-column body: prose left, chips right */
+/* Two-column body: prose left, chips right.
+   Sidebar widened to 18rem so a 2-column chip grid fits comfortably; the
+   longest chip label ("COT positioning") needs ~7.5rem per cell. */
 .briefing-strip__body {
   display: grid;
-  grid-template-columns: 1fr 14rem;
+  grid-template-columns: 1fr 18rem;
   gap: 1.25rem;
   align-items: start;
 }
@@ -1055,11 +1220,13 @@
   font-family: var(--font-mono);
 }
 
-/* Right column: ask label + chip stack */
+/* Right column: ASK GRANITE label + 2-column chip grid.
+   5 chips fit in 3 rows instead of 5 — trims vertical space by ~40% vs
+   the earlier vertical stack. No scroll or cap needed at this scale. */
 .briefing-strip__ask-col {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.4rem;
   padding-left: 1rem;
   border-left: 1px solid var(--border-subtle);
 }
@@ -1074,7 +1241,7 @@
 }
 
 .briefing-strip__ask-label {
-  margin: 0 0 0.1rem;
+  margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   font-size: 0.68rem;
@@ -1083,24 +1250,25 @@
 }
 
 .briefing-strip__chips {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
 }
 
-/* Individual question chip */
+/* Individual question chip — center-aligned so odd-count chip lists (5, 7)
+   don't leave a visually awkward gap on the last row. */
 .briefing-chip {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.38rem 0.7rem;
+  justify-content: center;
+  padding: 0.38rem 0.55rem;
   background: var(--bg-hover);
   border: 1px solid var(--border-subtle);
   border-radius: 4px;
   color: var(--text-secondary);
   font-family: var(--font-sans);
-  font-size: 0.8rem;
-  text-align: left;
+  font-size: 0.78rem;
+  text-align: center;
   cursor: pointer;
   transition: background 100ms ease, border-color 100ms ease, color 100ms ease;
   white-space: nowrap;
@@ -1252,6 +1420,100 @@
 @keyframes viz-fadein {
   from { opacity: 0; }
   to   { opacity: 1; }
+}
+
+/* Policy answer viz — hyperlinked document list, not a chart. */
+.policy-doc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.policy-doc-list__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.policy-doc-list__item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.policy-doc-list__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+}
+
+.policy-doc-list__date {
+  color: var(--accent);
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.policy-doc-list__date:hover {
+  text-decoration: underline;
+}
+
+.policy-doc-list__type {
+  padding: 0.05rem 0.35rem;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+}
+
+.policy-doc-list__title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  transition: color 100ms ease;
+}
+
+.policy-doc-list__title:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.policy-doc-list__source {
+  margin: 0.6rem 0 0;
+  font-size: 0.68rem;
+  color: var(--text-tertiary);
+}
+
+.policy-doc-list__source a {
+  color: var(--text-tertiary);
+  text-decoration: underline;
+  text-decoration-color: var(--border-subtle);
+}
+
+.policy-doc-list__source a:hover {
+  color: var(--accent);
+  text-decoration-color: var(--accent);
+}
+
+.answer-viz__empty {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 0.8rem;
+  font-style: italic;
 }
 
 .answer-viz__legend {

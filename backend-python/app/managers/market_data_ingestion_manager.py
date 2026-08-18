@@ -8,7 +8,9 @@ from datetime import date
 from app.clients.cftc_cot_client import CftcCotClient
 from app.clients.eia_client import EiaClient
 from app.clients.epa_rin_file_client import EpaRinFileClient
+from app.clients.federal_register_client import FederalRegisterClient
 from app.clients.yahoo_futures_client import YahooFuturesClient
+from datetime import timezone
 from app.managers.crush_margin_calculator import CrushMarginCalculator
 from app.managers.seed_data_provider import SeedDataProvider
 from app.managers.series_merge_manager import SeriesMergeManager
@@ -38,6 +40,7 @@ class MarketDataIngestionManager:
         seed_provider: SeedDataProvider | None = None,
         cot_client: CftcCotClient | None = None,
         epa_rin_client: EpaRinFileClient | None = None,
+        federal_register_client: FederalRegisterClient | None = None,
     ) -> None:
         self._repository = repository
         self._crush_config = crush_config
@@ -46,6 +49,7 @@ class MarketDataIngestionManager:
         self._seed_provider = seed_provider or SeedDataProvider()
         self._cot_client = cot_client or CftcCotClient()
         self._epa_rin_client = epa_rin_client or EpaRinFileClient()
+        self._federal_register_client = federal_register_client or FederalRegisterClient()
         self._merge_manager = SeriesMergeManager(repository)
         self._margin_calculator = CrushMarginCalculator(crush_config)
         self._z_score_manager = ZScoreManager()
@@ -82,6 +86,7 @@ class MarketDataIngestionManager:
         try:
             raw_count = self._ingest_raw_data(errors)
             cot_count = self._ingest_cot_reports(errors)
+            rfs_doc_count = self._ingest_rfs_documents(errors)
             merged_rows = self._merge_manager.rebuild_merged_daily()
             margin_count = self._recompute_margins(
                 merged_rows,
@@ -99,6 +104,7 @@ class MarketDataIngestionManager:
                 "run_id": run_id,
                 "raw_observations": raw_count,
                 "cot_reports": cot_count,
+                "rfs_documents": rfs_doc_count,
                 "merged_days": len(merged_rows),
                 "computed_margins": margin_count,
                 "status": "ok",
@@ -227,6 +233,33 @@ class MarketDataIngestionManager:
         from app.core.dependencies import get_settings
 
         return get_settings().env != "test"
+
+    def _ingest_rfs_documents(self, errors: list[str]) -> int:
+        """
+        Refresh Federal Register RFS documents at most once per week.
+
+        Casual: only ping Federal Register if our copy is older than 6 days.
+
+        Federal Register publishes at most a few RFS-relevant documents per
+        month; refreshing more than weekly is wasted bandwidth. Same cache
+        pattern as CFTC COT.
+        """
+        if not self._should_fetch_live_futures():
+            return 0
+        try:
+            latest_fetch = self._repository.latest_rfs_fetch_time()
+            if latest_fetch is not None:
+                # Normalise to timezone-aware UTC for a safe subtraction.
+                if latest_fetch.tzinfo is None:
+                    latest_fetch = latest_fetch.replace(tzinfo=timezone.utc)
+                age = DuckDbRepository.utc_now() - latest_fetch
+                if age.days < 6:
+                    return 0
+            documents = self._federal_register_client.fetch_recent()
+            return self._repository.upsert_rfs_documents(documents)
+        except Exception as exc:
+            errors.append(f"federal_register: {exc}")
+            return 0
 
     def _ingest_cot_reports(self, errors: list[str]) -> int:
         """

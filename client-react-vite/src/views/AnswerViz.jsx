@@ -18,8 +18,65 @@ export function AnswerViz({ questionId, chartData }) {
   if (questionId === 'wasde_interpretation') return <WasdeTrendBars data={chartData} />
   if (questionId === 'cot_interpretation')   return <CotBars data={chartData} />
   if (questionId === 'rin_market')           return <RinSparkline data={chartData} />
+  if (questionId === 'policy')               return <PolicyDocList data={chartData} />
   if (questionId === 'margin_drivers')       return <MarginDriverBars data={chartData} />
   return null
+}
+
+/**
+ * Policy: hyperlinked list of the 3 most recent EPA RFS Federal Register
+ * documents. This is the one AnswerViz component that renders HTML rather
+ * than SVG — links matter more than a chart for this question.
+ */
+function PolicyDocList({ data }) {
+  const docs = data?.recent_rfs_documents ?? []
+  if (docs.length === 0) {
+    return (
+      <div className="answer-viz">
+        <p className="answer-viz__empty">No RFS documents ingested yet.</p>
+      </div>
+    )
+  }
+  return (
+    <div className="answer-viz">
+      <ul className="policy-doc-list">
+        {docs.map((doc) => (
+          <li key={doc.url} className="policy-doc-list__item">
+            <div className="policy-doc-list__meta">
+              <a
+                href={doc.publication_date && doc.url ? doc.url : '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="policy-doc-list__date"
+              >
+                {doc.publication_date}
+              </a>
+              <span className="policy-doc-list__type">{doc.type}</span>
+            </div>
+            <a
+              href={doc.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="policy-doc-list__title"
+              title={doc.title}
+            >
+              {doc.title}
+            </a>
+          </li>
+        ))}
+      </ul>
+      <p className="policy-doc-list__source">
+        Source:{' '}
+        <a
+          href="https://www.federalregister.gov/agencies/environmental-protection-agency"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Federal Register (EPA)
+        </a>
+      </p>
+    </div>
+  )
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

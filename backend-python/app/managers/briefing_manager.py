@@ -195,6 +195,7 @@ class BriefingManager:
         "wasde_interpretation": "Interpret the latest USDA WASDE corn-for-ethanol figure",
         "cot_interpretation": "Summarise the latest CFTC COT positioning for corn",
         "rin_market": "Summarise the current EPA D6 RIN market",
+        "policy": "Summarise recent EPA / RFS regulatory activity",
         "margin_drivers": "What is driving the crush margin right now?",
     }
 
@@ -232,6 +233,7 @@ class BriefingManager:
             "wasde_interpretation": self._wasde_question_context,
             "cot_interpretation": self._cot_question_context,
             "rin_market": self._rin_question_context,
+            "policy": self._policy_question_context,
             "margin_drivers": self._margin_drivers_context,
         }[question_id]
         system_prompt = _QUESTION_SYSTEM_PROMPTS[question_id]
@@ -348,6 +350,53 @@ class BriefingManager:
                 }
                 for r in history
             ],
+        }
+
+    def _policy_question_context(self) -> dict:
+        """
+        Recent EPA RFS regulatory activity + current market pricing lens.
+
+        The Federal Register ingester keeps ``rfs_documents`` fresh weekly.
+        We surface the latest 3 documents alongside where D6 RIN is trading —
+        gives Granite both the qualitative catalyst and the market's response.
+        """
+        docs = self._repository.fetch_latest_rfs_documents(limit=3)
+        latest_docs: list[dict] = []
+        for doc in docs:
+            latest_docs.append({
+                "publication_date": doc["publication_date"].isoformat(),
+                "type": doc.get("doc_type") or "Document",
+                "title": doc["title"],
+                # Truncate abstract so Granite doesn't drown in regulatory prose.
+                "abstract": (doc.get("abstract") or "")[:400],
+                "url": doc["html_url"],
+            })
+
+        days_since_latest = None
+        if docs:
+            days_since_latest = (date.today() - docs[0]["publication_date"]).days
+
+        # Current market lens for the closing sentence.
+        rin_rows = self._repository.fetch_raw_observations_by_series(SERIES_D6_RIN)
+        rin_context: dict = {}
+        if rin_rows:
+            latest_rin = rin_rows[-1]
+            all_values = sorted(row.value for row in rin_rows)
+            pct = round(
+                sum(1 for v in all_values if v <= latest_rin.value) / len(all_values), 3
+            )
+            rin_context = {
+                "d6_rin_price_usd_per_gallon": round(latest_rin.value, 4),
+                "d6_rin_percentile_of_full_history_0_to_100": round(pct * 100),
+                "d6_rin_full_history_median_usd_per_gallon": round(
+                    all_values[len(all_values) // 2], 4
+                ),
+            }
+
+        return {
+            "recent_rfs_documents": latest_docs,
+            "days_since_latest_document": days_since_latest,
+            "current_market_lens": rin_context,
         }
 
     def _rin_question_context(self) -> dict:
@@ -630,6 +679,23 @@ _QUESTION_SYSTEM_PROMPTS: dict[str, str] = {
         "it faithfully. Do NOT invent a different directional conclusion. The server has already computed "
         "the correct direction — you narrate, do not reason.\n"
         "No bullet points, no markdown, no invented numbers. Maximum 4 sentences."
+    ),
+    "policy": (
+        "You are a commodity analyst summarising recent EPA / RFS regulatory activity for a "
+        "biofuels trader. Write 3-4 sentences in plain prose. Follow these rules exactly:\n"
+        "1. Open with the SINGLE most recent document from `recent_rfs_documents[0]` — cite "
+        "the `type`, a short paraphrase of the `title`, and the `publication_date`. Do NOT cite "
+        "a different item as the most recent.\n"
+        "2. In one sentence, characterise what this action likely means for D6 RIN demand — "
+        "SRE decisions typically REDUCE demand (bearish), Set Rules / RVO finalisations that "
+        "raise volume requirements typically INCREASE demand (bullish), information collection "
+        "renewals are neutral.\n"
+        "3. Cite `current_market_lens.d6_rin_price_usd_per_gallon` in dollars per gallon and "
+        "`d6_rin_percentile_of_full_history_0_to_100` as an integer percentile (e.g. '87th percentile'). "
+        "This tells the reader where the market has priced things right now.\n"
+        "4. If there is a second recent action in `recent_rfs_documents[1]`, mention it briefly "
+        "as ongoing context. Otherwise skip.\n"
+        "No bullet points, no markdown, no invented numbers, no fabricated URLs. Maximum 4 sentences."
     ),
     "margin_drivers": (
         "You are a commodity analyst explaining what is driving the ethanol crush margin. "

@@ -170,6 +170,7 @@ const PRESET_QUESTIONS = [
   { id: 'wasde_interpretation', label: 'WASDE monthly'   },
   { id: 'cot_interpretation',   label: 'COT positioning' },
   { id: 'rin_market',           label: 'RIN market'      },
+  { id: 'policy',               label: 'Policy'          },
   { id: 'margin_drivers',       label: 'Margin drivers'  },
 ]
 

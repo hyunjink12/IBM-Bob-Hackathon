@@ -136,6 +136,17 @@ class DuckDbRepository:
         )
         """,
         """
+        CREATE TABLE IF NOT EXISTS rfs_documents (
+            document_number VARCHAR PRIMARY KEY,
+            publication_date DATE NOT NULL,
+            doc_type VARCHAR,
+            title VARCHAR NOT NULL,
+            abstract VARCHAR,
+            html_url VARCHAR NOT NULL,
+            fetched_at TIMESTAMPTZ NOT NULL
+        )
+        """,
+        """
         CREATE TABLE IF NOT EXISTS cot_reports (
             contract_market_code VARCHAR NOT NULL,
             report_date DATE NOT NULL,
@@ -560,6 +571,72 @@ class DuckDbRepository:
             wasde_corn_for_ethanol_mbu=row[9],
             d6_rin_usd_per_gallon=row[10] if len(row) > 10 else None,
         )
+
+    def upsert_rfs_documents(self, documents: list) -> int:
+        """
+        Insert or replace Federal Register RFS documents keyed on document_number.
+
+        `documents` is a list of app.clients.federal_register_client.RfsDocument
+        (typed loose to avoid a circular import into this low-level module).
+        """
+        if not documents:
+            return 0
+        rows = [
+            (
+                d.document_number,
+                d.publication_date,
+                d.doc_type,
+                d.title,
+                d.abstract,
+                d.html_url,
+                d.fetched_at,
+            )
+            for d in documents
+        ]
+        self._executemany(
+            """
+            INSERT INTO rfs_documents (
+                document_number, publication_date, doc_type,
+                title, abstract, html_url, fetched_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (document_number) DO UPDATE SET
+                publication_date = excluded.publication_date,
+                doc_type = excluded.doc_type,
+                title = excluded.title,
+                abstract = excluded.abstract,
+                html_url = excluded.html_url,
+                fetched_at = excluded.fetched_at
+            """,
+            rows,
+        )
+        return len(rows)
+
+    def fetch_latest_rfs_documents(self, limit: int = 5) -> list[dict[str, Any]]:
+        """Return most recent RFS documents, newest first."""
+        rows = self._fetchall(
+            """
+            SELECT document_number, publication_date, doc_type, title, abstract, html_url, fetched_at
+            FROM rfs_documents ORDER BY publication_date DESC LIMIT ?
+            """,
+            [limit],
+        )
+        return [
+            {
+                "document_number": row[0],
+                "publication_date": row[1],
+                "doc_type": row[2],
+                "title": row[3],
+                "abstract": row[4],
+                "html_url": row[5],
+                "fetched_at": row[6],
+            }
+            for row in rows
+        ]
+
+    def latest_rfs_fetch_time(self) -> datetime | None:
+        """Timestamp of the most recent Federal Register pull — for cache freshness checks."""
+        row = self._fetchone("SELECT MAX(fetched_at) FROM rfs_documents")
+        return row[0] if row and row[0] else None
 
     def upsert_cot_reports(self, reports: list) -> int:
         """
