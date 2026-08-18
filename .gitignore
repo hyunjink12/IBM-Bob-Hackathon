@@ -36,9 +36,15 @@ lerna-debug.log*
 !.env.example
 
 # --- Local DuckDB data ---
-backend-python/data/
+# Ignore the data dir contents (DuckDB file + WAL sidecars) but keep the
+# EPA seed CSVs tracked — they're public EPA data, and the Docker image
+# needs them to bootstrap a fresh Railway volume on first boot.
+backend-python/data/*
+!backend-python/data/epa/
+backend-python/data/epa/*.duckdb
 *.duckdb
 *.duckdb.wal
+*.pre_rin_backup
 
 # --- Logs ---
 logs/
