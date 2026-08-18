@@ -42,10 +42,39 @@ class CrushModelConfig:
 
     @classmethod
     def default(cls) -> CrushModelConfig:
-        """Load the repo-default crush model config."""
-        repo_root = Path(__file__).resolve().parents[3]
-        config_path = repo_root / "config" / "crush_model.json"
-        return cls.from_json_file(config_path)
+        """
+        Load the repo-default crush model config.
+
+        Resolution order:
+        1. APP_CRUSH_MODEL_PATH env var (Docker/Railway sets /app/config/crush_model.json)
+        2. Repo root ../config/crush_model.json (local dev — backend-python/app/models/x.py → parents[3])
+        3. /app/config/crush_model.json (Docker image layout fallback)
+
+        The env var path is required on Railway because parents[3] resolves to
+        `/` inside the /app/app/models/ container layout, which has no config/
+        directory. The Dockerfile sets APP_CRUSH_MODEL_PATH so this "just works"
+        without call sites needing to plumb settings through.
+        """
+        import os
+        env_path = os.environ.get("APP_CRUSH_MODEL_PATH")
+        if env_path:
+            path = Path(env_path)
+            if path.exists():
+                return cls.from_json_file(path)
+
+        repo_root_candidate = Path(__file__).resolve().parents[3] / "config" / "crush_model.json"
+        if repo_root_candidate.exists():
+            return cls.from_json_file(repo_root_candidate)
+
+        docker_candidate = Path("/app/config/crush_model.json")
+        if docker_candidate.exists():
+            return cls.from_json_file(docker_candidate)
+
+        raise FileNotFoundError(
+            f"crush_model.json not found in any expected location: "
+            f"APP_CRUSH_MODEL_PATH={env_path!r}, tried {repo_root_candidate} "
+            f"and {docker_candidate}"
+        )
 
     def ddgs_revenue_per_bushel(self, ddgs_usd_per_short_ton: float) -> float:
         """Convert DDGS $/short ton into coproduct revenue per bushel of corn."""
