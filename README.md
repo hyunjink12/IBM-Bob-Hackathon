@@ -6,6 +6,15 @@ Decision-support dashboard for corn ethanol crush margins, z-scores, and warning
 
 IBM Bob (IBM's AI coding agent) built this dashboard throughout the hackathon; the IBM AI in the live product is **IBM Granite on watsonx.ai**. All numbers — crush margin, z-score, signal label, warning rules, inventory stress — are computed in Python. Granite takes that snapshot and writes a short trader briefing: what the margin signal means right now, which warnings are active, how those rules have performed historically, and one thing to watch. It shows up as the **Signal Briefing** strip at the top of the dashboard (optional — set `APP_WATSONX_API_KEY` and `APP_WATSONX_PROJECT_ID` in `.env`; without them the rest of the app is unchanged).
 
+## Deploy (public demo)
+
+- **Frontend**: Vercel — root directory `client-react-vite/`. Set `VITE_API_BASE_URL` to the backend URL (no trailing slash).
+- **Backend**: Railway — repo picks up `railway.json` + `backend-python/Dockerfile` automatically.
+  1. In Railway → **Volumes** → attach a volume to the service and set the mount path to `/data`.
+  2. In **Variables**, set `APP_EIA_API_KEY`, `APP_ADMIN_TOKEN`, `APP_WATSONX_API_KEY`, `APP_WATSONX_PROJECT_ID`. `APP_DATA_DIR=/data` is already baked into the Dockerfile.
+  3. First deploy auto-seeds `/data/epa/` from the vintage-tagged CSVs baked into the image (`rin_prices_2026.csv` etc.) — no manual upload needed. To refresh mid-year, `railway ssh` into the service and overwrite `/data/epa/rin_prices_2026.csv`. The DuckDB file lives beside it at `/data/ethanol_dashboard.duckdb` and persists across redeploys.
+- Overrides: `APP_DUCKDB_PATH` and `APP_EPA_RIN_CSV_PATH` still work if you want to relocate individual files.
+
 ## Run locally
 
 You need two processes: the FastAPI backend (port 8000) and the Vite dev server (port 5173). Start the backend first — Vite proxies `/api` to `localhost:8000`, so the frontend needs it up before it can render live data.
@@ -174,15 +183,6 @@ No coproducts, no costs, no RIN. This is a simplified market-spread screen for t
 cd backend-python
 .venv/bin/pytest -q                             # Windows: .venv\Scripts\pytest
 ```
-
-## Deploy (public demo)
-
-- **Frontend**: Vercel — root directory `client-react-vite/`. Set `VITE_API_BASE_URL` to the backend URL (no trailing slash).
-- **Backend**: Railway — repo picks up `railway.json` + `backend-python/Dockerfile` automatically.
-  1. In Railway → **Volumes** → attach a volume to the service and set the mount path to `/data`.
-  2. In **Variables**, set `APP_EIA_API_KEY`, `APP_ADMIN_TOKEN`, `APP_WATSONX_API_KEY`, `APP_WATSONX_PROJECT_ID`. `APP_DATA_DIR=/data` is already baked into the Dockerfile.
-  3. First deploy auto-seeds `/data/epa/` from the vintage-tagged CSVs baked into the image (`rin_prices_2026.csv` etc.) — no manual upload needed. To refresh mid-year, `railway ssh` into the service and overwrite `/data/epa/rin_prices_2026.csv`. The DuckDB file lives beside it at `/data/ethanol_dashboard.duckdb` and persists across redeploys.
-- Overrides: `APP_DUCKDB_PATH` and `APP_EPA_RIN_CSV_PATH` still work if you want to relocate individual files.
 
 ## Config
 
