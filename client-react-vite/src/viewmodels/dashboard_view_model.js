@@ -62,13 +62,6 @@ export function useDashboardViewModel(apiClient) {
     setLoading(true)
     setError(null)
     try {
-      // Poke the backend to re-ingest upstream data first (Yahoo/EIA/CFTC).
-      // Server-side cooldown means this is a no-op if we ingested < 60s ago,
-      // so it's safe to fire on every user Refresh click. When it does run,
-      // we wait for it to finish before firing the reads so the reads see
-      // the fresh data. Errors are swallowed inside triggerRefresh() — the
-      // reads still proceed against whatever's currently in the DB.
-      await client.triggerRefresh()
       const [
         overviewData,
         marginsData,
@@ -120,6 +113,18 @@ export function useDashboardViewModel(apiClient) {
     refresh()
   }, [refresh])
 
+  /**
+   * User-initiated Refresh button handler: poke the backend to re-pull from
+   * Yahoo/EIA/CFTC, THEN re-read. Distinct from the plain `refresh` used on
+   * initial page load — page load reads whatever's in the DB immediately so
+   * the first paint isn't blocked on a 15–30s upstream ingest. Server-side
+   * 60s cooldown means clicking Refresh again within a minute is a no-op.
+   */
+  const refreshWithIngest = useCallback(async () => {
+    await client.triggerRefresh()
+    await refresh()
+  }, [client, refresh])
+
   return {
     physicalChartRange,
     setPhysicalChartRange,
@@ -143,6 +148,7 @@ export function useDashboardViewModel(apiClient) {
     loading,
     error,
     refresh,
+    refreshWithIngest,
     config: dashboardConfig,
   }
 }

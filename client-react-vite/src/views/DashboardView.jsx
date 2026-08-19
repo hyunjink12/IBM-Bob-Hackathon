@@ -48,7 +48,7 @@ export function DashboardView() {
     cotPositioning,
     loading,
     error,
-    refresh,
+    refreshWithIngest,
     config,
   } = useDashboardViewModel()
 
@@ -82,7 +82,7 @@ export function DashboardView() {
           <h1>Ethanol Crush Margin Dashboard</h1>
         </div>
         <div className="dashboard__controls">
-          <button type="button" onClick={refresh}>
+          <button type="button" onClick={refreshWithIngest}>
             Refresh
           </button>
           <ThemeToggle />
