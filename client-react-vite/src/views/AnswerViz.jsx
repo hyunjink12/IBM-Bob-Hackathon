@@ -196,9 +196,10 @@ function CotBars({ data }) {
   const pct     = latest.mm_net_percentile_5y        // 0..1
 
   // Layout constants — all in SVG user-units, all ≤ VW
-  const LABEL_W = 52   // label column
-  const TRACK_W = 180  // bar track
-  const VALUE_W = VW - LABEL_W - TRACK_W  // = 48 — value label column
+  const LABEL_W = 52   // left label column ("MM net", "Prod net", "5Y pct")
+  const VALUE_W = 44   // right value column — reserved so numbers pin here
+  const TRACK_W = VW - LABEL_W - VALUE_W  // bar track fits between the two columns
+  const VALUE_X = VW - 4  // right-anchored text x — all three values line up
 
   const barMax = Math.max(Math.abs(mmNet), Math.abs(prodNet), 1)
   const barPx  = (v) => (Math.abs(v) / barMax) * TRACK_W
@@ -250,11 +251,14 @@ function CotBars({ data }) {
             animationDelay: delay,
           }}
         />
-        {/* value label — clamped to stay inside VW */}
+        {/* Value label — pinned to the reserved right column so numbers for
+            MM net, Prod net, and the 5Y percentile all line up vertically
+            regardless of bar length. Prevents labels from floating over
+            the track fill. */}
         <text
-          x={Math.min(LABEL_W + barW + 4, VW - VALUE_W + 4)}
+          x={VALUE_X}
           y={y + 12}
-          fontSize="9" fill="#9aa5b1" textAnchor="start"
+          fontSize="9" fill="#9aa5b1" textAnchor="end"
           className="answer-viz--fadein"
           style={{ animationDelay: delay }}
         >
@@ -291,11 +295,12 @@ function CotBars({ data }) {
               {/* dot */}
               <circle cx={dotX} cy={gaugeY + 6} r="5" fill="#e6edf3" stroke="#151922" strokeWidth="1.5"
                 className="viz-dot-anim" style={{ animationDelay: '0.5s' }} />
-              {/* label */}
+              {/* Percentile label — same right-anchored column as the two
+                  bar rows above so all three values line up vertically. */}
               <text
-                x={Math.min(dotX + 8, VW - 4)}
+                x={VALUE_X}
                 y={gaugeY + 10}
-                fontSize="9" fill="#9aa5b1" textAnchor="start"
+                fontSize="9" fill="#9aa5b1" textAnchor="end"
                 className="answer-viz--fadein"
                 style={{ animationDelay: '0.5s' }}
               >
