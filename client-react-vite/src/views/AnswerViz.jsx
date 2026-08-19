@@ -140,7 +140,7 @@ function EiaSparklines({ data }) {
       >
         {/* baseline */}
         <line x1={pad.l} y1={baselineY} x2={pad.l + iW} y2={baselineY}
-          stroke="#2a3140" strokeWidth="1" />
+          className="chrome-baseline" strokeWidth="1" />
 
         {/* stocks line — draws in */}
         <path
@@ -168,12 +168,12 @@ function EiaSparklines({ data }) {
         ))}
 
         {/* date labels — clamped inside viewBox */}
-        <text x={pad.l} y={baselineY + 14} fontSize="9" fill="#57606a" textAnchor="start"
-          className="answer-viz--fadein">
+        <text x={pad.l} y={baselineY + 14} fontSize="9" textAnchor="start"
+          className="answer-viz--fadein chrome-text">
           {releases[0].date?.slice(5)}
         </text>
-        <text x={pad.l + iW} y={baselineY + 14} fontSize="9" fill="#57606a" textAnchor="end"
-          className="answer-viz--fadein">
+        <text x={pad.l + iW} y={baselineY + 14} fontSize="9" textAnchor="end"
+          className="answer-viz--fadein chrome-text">
           {releases[releases.length - 1].date?.slice(5)}
         </text>
       </svg>
@@ -237,11 +237,13 @@ function CotBars({ data }) {
   function BarRow({ y, label, value, barW, color, delay }) {
     return (
       <g>
-        <text x={LABEL_W - 4} y={y + 11} fontSize="9.5" fill="#7d8da6" textAnchor="end">
+        <text x={LABEL_W - 4} y={y + 11} fontSize="9.5" textAnchor="end"
+              className="chrome-label">
           {label}
         </text>
         {/* track background */}
-        <rect x={LABEL_W} y={y + 3} width={TRACK_W} height={10} fill="#1a2030" rx="2" />
+        <rect x={LABEL_W} y={y + 3} width={TRACK_W} height={10} rx="2"
+              className="chrome-track" />
         {/* value bar — scaleX animates from 0→1 around its left edge */}
         <rect
           x={LABEL_W} y={y + 3} width={barW} height={10} fill={color} rx="2"
@@ -258,8 +260,8 @@ function CotBars({ data }) {
         <text
           x={VALUE_X}
           y={y + 12}
-          fontSize="9" fill="#9aa5b1" textAnchor="end"
-          className="answer-viz--fadein"
+          fontSize="9" textAnchor="end"
+          className="answer-viz--fadein chrome-text"
           style={{ animationDelay: delay }}
         >
           {fmtK(value)}
@@ -283,9 +285,11 @@ function CotBars({ data }) {
           const dotX = LABEL_W + pct * TRACK_W
           return (
             <g>
-              <text x={LABEL_W - 4} y={gaugeY + 10} fontSize="9.5" fill="#7d8da6" textAnchor="end">5Y pct</text>
+              <text x={LABEL_W - 4} y={gaugeY + 10} fontSize="9.5" textAnchor="end"
+                    className="chrome-label">5Y pct</text>
               {/* track */}
-              <rect x={LABEL_W} y={gaugeY + 3} width={TRACK_W} height={6} fill="#1a2030" rx="3" />
+              <rect x={LABEL_W} y={gaugeY + 3} width={TRACK_W} height={6} rx="3"
+                    className="chrome-track" />
               {/* fill — animates width */}
               <rect x={LABEL_W} y={gaugeY + 3}
                 width={pct * TRACK_W} height={6} fill={gaugeColor} rx="3"
@@ -293,15 +297,16 @@ function CotBars({ data }) {
                 style={{ transformOrigin: `${LABEL_W}px ${gaugeY + 6}px`, animationDelay: '0.16s' }}
               />
               {/* dot */}
-              <circle cx={dotX} cy={gaugeY + 6} r="5" fill="#e6edf3" stroke="#151922" strokeWidth="1.5"
-                className="viz-dot-anim" style={{ animationDelay: '0.5s' }} />
+              <circle cx={dotX} cy={gaugeY + 6} r="5" strokeWidth="1.5"
+                className="viz-dot-anim chrome-dot-fill chrome-dot-outline"
+                style={{ animationDelay: '0.5s' }} />
               {/* Percentile label — same right-anchored column as the two
                   bar rows above so all three values line up vertically. */}
               <text
                 x={VALUE_X}
                 y={gaugeY + 10}
-                fontSize="9" fill="#9aa5b1" textAnchor="end"
-                className="answer-viz--fadein"
+                fontSize="9" textAnchor="end"
+                className="answer-viz--fadein chrome-text"
                 style={{ animationDelay: '0.5s' }}
               >
                 {(pct * 100).toFixed(0)}th
@@ -313,11 +318,14 @@ function CotBars({ data }) {
         {/* 4-week MM net sparkline */}
         {hasSpk && (
           <>
-            <line x1={0} y1={SKY + SKH} x2={VW} y2={SKY + SKH} stroke="#2a3140" strokeWidth="1" />
-            <path d={sparkD} fill="none" stroke="#5b9cf5" strokeWidth="1.8" strokeLinejoin="round"
+            <line x1={0} y1={SKY + SKH} x2={VW} y2={SKY + SKH}
+              className="chrome-baseline" strokeWidth="1" />
+            <path d={sparkD} fill="none" strokeWidth="1.8" strokeLinejoin="round"
               strokeDasharray={sparkLen} strokeDashoffset={sparkLen}
-              className="viz-line-anim" style={{ animationDelay: '0.25s' }} />
-            <text x={0} y={SKY + SKH + 14} fontSize="8" fill="#57606a" className="answer-viz--fadein">
+              className="viz-line-anim chrome-accent-stroke"
+              style={{ animationDelay: '0.25s' }} />
+            <text x={0} y={SKY + SKH + 14} fontSize="8"
+                  className="answer-viz--fadein chrome-text">
               4-week MM net trend
             </text>
           </>
@@ -366,7 +374,8 @@ function MarginDriverBars({ data }) {
     <div className="answer-viz">
       <svg width="100%" viewBox={`0 0 ${VW} ${VH}`} className="answer-viz__svg" aria-hidden="true">
         {/* zero axis */}
-        <line x1={ZERO_X} y1={0} x2={ZERO_X} y2={VH - 16} stroke="#2a3140" strokeWidth="1" />
+        <line x1={ZERO_X} y1={0} x2={ZERO_X} y2={VH - 16}
+          className="chrome-baseline" strokeWidth="1" />
 
         {changes.map(({ label, color, pct }, i) => {
           const y    = i * ROW_H + 2
@@ -386,7 +395,8 @@ function MarginDriverBars({ data }) {
 
           return (
             <g key={label}>
-              <text x={LABEL_W - 4} y={y + 12} fontSize="9.5" fill="#7d8da6" textAnchor="end">
+              <text x={LABEL_W - 4} y={y + 12} fontSize="9.5" textAnchor="end"
+                    className="chrome-label">
                 {label}
               </text>
               <rect
@@ -398,8 +408,8 @@ function MarginDriverBars({ data }) {
                 }}
               />
               <text
-                x={valX} y={y + 12} fontSize="9" fill="#9aa5b1" textAnchor={valAnchor}
-                className="answer-viz--fadein"
+                x={valX} y={y + 12} fontSize="9" textAnchor={valAnchor}
+                className="answer-viz--fadein chrome-text"
                 style={{ animationDelay: `${0.35 + i * 0.07}s` }}
               >
                 {sign}{(pct * 100).toFixed(1)}%
@@ -409,8 +419,8 @@ function MarginDriverBars({ data }) {
         })}
 
         {/* date range label — bottom, full width */}
-        <text x={VW / 2} y={VH - 4} fontSize="8" fill="#57606a" textAnchor="middle"
-          className="answer-viz--fadein">
+        <text x={VW / 2} y={VH - 4} fontSize="8" textAnchor="middle"
+          className="answer-viz--fadein chrome-text">
           {first.date?.slice(5)} → {last.date?.slice(5)}
         </text>
       </svg>
@@ -487,12 +497,14 @@ function RinSparkline({ data }) {
               className="answer-viz--fadein" style={{ animationDelay: '0.4s' }}>
           {priceLabel}/RIN
         </text>
-        <text x={VW - pad.r + 8} y={pad.t + 20} fontSize="8.5" fill="#9aa5b1"
-              className="answer-viz--fadein" style={{ animationDelay: '0.5s' }}>
+        <text x={VW - pad.r + 8} y={pad.t + 20} fontSize="8.5"
+              className="answer-viz--fadein chrome-text"
+              style={{ animationDelay: '0.5s' }}>
           {pctLabel} of 5Y
         </text>
-        <text x={VW / 2} y={VH - 6} fontSize="8" fill="#57606a" textAnchor="middle"
-              className="answer-viz--fadein" style={{ animationDelay: '0.6s' }}>
+        <text x={VW / 2} y={VH - 6} fontSize="8" textAnchor="middle"
+              className="answer-viz--fadein chrome-text"
+              style={{ animationDelay: '0.6s' }}>
           D6 RIN · {firstDate} → {lastDate}
         </text>
       </svg>
@@ -542,9 +554,8 @@ function WasdeTrendBars({ data }) {
             <rect
               key={r.report_date}
               x={x} y={y} width={barW} height={h}
-              fill={isLatest ? '#4589ff' : '#3a4a63'}
               rx="1.5"
-              className="viz-bar-anim"
+              className={`viz-bar-anim ${isLatest ? 'chrome-accent-fill' : 'chrome-dim-fill'}`}
               style={{
                 transformOrigin: `${x + barW / 2}px ${pad.t + iH}px`,
                 animationDelay: `${i * 0.06}s`,
@@ -552,20 +563,23 @@ function WasdeTrendBars({ data }) {
             />
           )
         })}
-        <text x={VW - pad.r + 8} y={pad.t + 6} fontSize="10.5" fill="#4589ff" fontWeight="600"
-              className="answer-viz--fadein" style={{ animationDelay: '0.4s' }}>
+        <text x={VW - pad.r + 8} y={pad.t + 6} fontSize="10.5" fontWeight="600"
+              className="answer-viz--fadein chrome-accent-fill"
+              style={{ animationDelay: '0.4s' }}>
           {Math.round(latestVal).toLocaleString()}
         </text>
-        <text x={VW - pad.r + 8} y={pad.t + 18} fontSize="8.5" fill="#9aa5b1"
-              className="answer-viz--fadein" style={{ animationDelay: '0.45s' }}>
+        <text x={VW - pad.r + 8} y={pad.t + 18} fontSize="8.5"
+              className="answer-viz--fadein chrome-text"
+              style={{ animationDelay: '0.45s' }}>
           MBU corn-for-ethanol
         </text>
         <text x={VW - pad.r + 8} y={pad.t + 34} fontSize="9" fill={deltaColor} fontWeight="600"
               className="answer-viz--fadein" style={{ animationDelay: '0.55s' }}>
           {deltaLabel}
         </text>
-        <text x={VW / 2} y={VH - 6} fontSize="8" fill="#57606a" textAnchor="middle"
-              className="answer-viz--fadein" style={{ animationDelay: '0.65s' }}>
+        <text x={VW / 2} y={VH - 6} fontSize="8" textAnchor="middle"
+              className="answer-viz--fadein chrome-text"
+              style={{ animationDelay: '0.65s' }}>
           WASDE · next {nextDate}
         </text>
       </svg>
