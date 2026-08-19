@@ -229,9 +229,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.4rem;
-  height: 2.4rem;
-  padding: 0;
+  /* Match the Refresh button's rendered height (0.45rem vertical padding +
+     0.85rem font at ~1.5 line-height). Setting explicit padding on the
+     button and line-height:0 on the icon slot lands it at the same box
+     height as Refresh without hardcoding a pixel number. */
+  padding: 0.45rem;
+  line-height: 0;
   color: var(--text-secondary);
   cursor: pointer;
 }
@@ -432,9 +435,13 @@
   position: absolute;
   bottom: calc(100% + 4px);
   padding: 0.3rem 0.5rem;
-  background: rgba(11, 15, 20, 0.92);
-  border: 1px solid var(--border-subtle);
+  /* Theme-aware background so light-mode text (dark) doesn't disappear
+     against a hardcoded near-black rgba. Card token gives a subtle warm
+     surface in light mode and stays inset-dark in the original theme. */
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
   border-radius: 3px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   font-size: 0.7rem;
   line-height: 1.25;
   color: var(--text-primary);
