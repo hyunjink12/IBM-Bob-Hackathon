@@ -66,6 +66,26 @@ export class DashboardApiClient {
     return this._get(`/api/dashboard/cot-positioning?${params}`)
   }
 
+  /**
+   * Poke the backend to re-pull from Yahoo/EIA/CFTC. The server enforces a
+   * 60s cooldown, so hitting this repeatedly is safe — the second call
+   * within a minute returns the previous run's metadata without doing any
+   * upstream fetches. Failures shouldn't block the caller's subsequent
+   * read-side refetches, so we swallow errors and let the reads proceed
+   * against whatever's currently in the DB.
+   */
+  async triggerRefresh() {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/dashboard/refresh`, {
+        method: 'POST',
+      })
+      if (!response.ok) return null
+      return response.json()
+    } catch {
+      return null
+    }
+  }
+
   async _get(path) {
     const response = await fetch(`${this.baseUrl}${path}`)
     if (!response.ok) {

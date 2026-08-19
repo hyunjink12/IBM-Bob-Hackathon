@@ -113,7 +113,9 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
 
     app.include_router(create_health_router(health_manager))
     app.include_router(create_hello_router(hello_manager))
-    app.include_router(create_dashboard_router(dashboard_manager, briefing_manager))
+    app.include_router(
+        create_dashboard_router(dashboard_manager, briefing_manager, ingestion_manager)
+    )
     app.include_router(
         create_admin_router(ingestion_manager, resolved_settings.admin_token)
     )

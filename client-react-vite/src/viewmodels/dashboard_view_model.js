@@ -62,6 +62,13 @@ export function useDashboardViewModel(apiClient) {
     setLoading(true)
     setError(null)
     try {
+      // Poke the backend to re-ingest upstream data first (Yahoo/EIA/CFTC).
+      // Server-side cooldown means this is a no-op if we ingested < 60s ago,
+      // so it's safe to fire on every user Refresh click. When it does run,
+      // we wait for it to finish before firing the reads so the reads see
+      // the fresh data. Errors are swallowed inside triggerRefresh() — the
+      // reads still proceed against whatever's currently in the DB.
+      await client.triggerRefresh()
       const [
         overviewData,
         marginsData,

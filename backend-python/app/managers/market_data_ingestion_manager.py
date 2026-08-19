@@ -55,6 +55,15 @@ class MarketDataIngestionManager:
         self._z_score_manager = ZScoreManager()
         self._warning_manager = WarningSignalManager(repository)
 
+    @property
+    def repository(self):
+        """Read-only accessor for the shared DuckDB repository.
+
+        Exposed so the /refresh endpoint can check the last ingest timestamp
+        without introducing a second DI hop through get_repository().
+        """
+        return self._repository
+
     def should_refresh_live_data_on_startup(self) -> bool:
         """
         Decide whether to re-run ingestion when the database already has rows.
