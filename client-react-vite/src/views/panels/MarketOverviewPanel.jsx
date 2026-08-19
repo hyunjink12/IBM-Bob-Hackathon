@@ -315,7 +315,19 @@ function BlendingEconomicsCard({ blending }) {
       </div>
       <div className="blending-card__body">
         <div className="blending-card__value-block">
-          <p className="blending-card__value">
+          <p
+            className="blending-card__value"
+            title={
+              `blender_advantage = RBOB − (ethanol − D6 RIN)\n` +
+              `${blending.rbob_usd_per_gallon.toFixed(2)} − ` +
+              `(${blending.ethanol_usd_per_gallon.toFixed(2)} − ` +
+              `${blending.rin_included ? blending.d6_rin_usd_per_gallon.toFixed(2) : '0.00'}) ` +
+              `= ${sign}$${magnitude}/gal\n\n` +
+              `Refiner POV: the RIN credit is captured by the blender at the ` +
+              `point of blending, so it offsets the wholesale ethanol cost when ` +
+              `evaluating ethanol vs RBOB as a blendstock.`
+            }
+          >
             {sign}${magnitude}
             <span className="blending-card__unit">/gal</span>
           </p>

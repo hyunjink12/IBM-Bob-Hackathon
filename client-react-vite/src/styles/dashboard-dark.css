@@ -525,6 +525,9 @@
 }
 
 .blending-card__value {
+  /* `title` attribute on the value shows the formula + live numbers on hover
+     — cursor:help hints that the value is inspectable. */
+  cursor: help;
   margin: 0;
   font-size: 1.55rem;
   font-weight: 600;
