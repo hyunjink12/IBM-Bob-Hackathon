@@ -477,6 +477,26 @@ class DashboardManager:
         production_rows = self._repository.fetch_raw_observations_by_series(
             SERIES_ETHANOL_PRODUCTION, wow_lookback, end_date
         )
+
+        # Deduplicate to one row per ISO week — the DB carries BOTH seed
+        # (Wednesday-dated) and live EIA (Friday period-ending) rows and both
+        # would render as separate dots on the chart. Prefer the live-EIA
+        # source so real prints supersede the seeded placeholder for weeks
+        # where both exist; seed remains as a fallback for early history.
+        def _dedupe_weekly(rows):
+            by_week: dict[tuple[int, int], object] = {}
+            for r in rows:
+                iso_year, iso_week, _ = r.obs_date.isocalendar()
+                key = (iso_year, iso_week)
+                existing = by_week.get(key)
+                if existing is None or (
+                    existing.source != "eia" and r.source == "eia"
+                ):
+                    by_week[key] = r
+            return sorted(by_week.values(), key=lambda r: r.obs_date)
+
+        stocks_rows = _dedupe_weekly(stocks_rows)
+        production_rows = _dedupe_weekly(production_rows)
         production_by_date = {r.obs_date: r.value for r in production_rows}
 
         releases: list[dict] = []
