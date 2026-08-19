@@ -846,6 +846,20 @@
 .composition__row.is-regulatory .composition__bar { background: var(--accent); }
 .composition__row.is-regulatory .composition__value { color: var(--accent); }
 
+/* Ask-Granite viz chrome — SVG attributes can't reference var() directly, so
+   theme-tokened fill/stroke lives in classes applied to elements that need
+   to swap between dark and light. Per-series identifier colors (stocks blue,
+   prod orange, bull/bear green/red) stay hardcoded — those are semantic. */
+.answer-viz__svg .chrome-baseline    { stroke: var(--border-subtle); }
+.answer-viz__svg .chrome-track       { fill: var(--bg-inset); }
+.answer-viz__svg .chrome-text        { fill: var(--text-tertiary); }
+.answer-viz__svg .chrome-label       { fill: var(--text-secondary); }
+.answer-viz__svg .chrome-dot-fill    { fill: var(--text-primary); }
+.answer-viz__svg .chrome-dot-outline { stroke: var(--bg-card); }
+.answer-viz__svg .chrome-accent-fill   { fill: var(--accent); }
+.answer-viz__svg .chrome-accent-stroke { stroke: var(--accent); }
+.answer-viz__svg .chrome-dim-fill    { fill: var(--text-tertiary); }
+
 /* Small uppercase eyebrow between the physical-driver rows and the
    regulatory-value row so the two categories don't read as a single list. */
 .composition__section-label {
