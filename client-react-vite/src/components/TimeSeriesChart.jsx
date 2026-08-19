@@ -242,7 +242,15 @@ export function TimeSeriesChart({
   }, [series, xKey, yKeys, labels, colors, height, title, valueFormatter, events, eventPrimaryKey, theme])
 
   return (
-    <div className="chart-shell" ref={containerRef} style={{ position: 'relative' }}>
+    <div
+      className="chart-shell"
+      ref={containerRef}
+      /* Reserve vertical space BEFORE uPlot mounts its canvas — otherwise
+         the shell is 0px tall on first paint and everything below jumps
+         down by `height` when the chart appears. Was the largest single
+         contributor to CLS (~260px shift × 3 charts). */
+      style={{ position: 'relative', minHeight: `${height}px` }}
+    >
       {hoverPopup ? (
         <EventPopup
           left={hoverPopup.left}
