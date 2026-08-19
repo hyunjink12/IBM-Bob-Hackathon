@@ -524,10 +524,95 @@
   margin-top: 0.35rem;
 }
 
-.blending-card__value {
-  /* `title` attribute on the value shows the formula + live numbers on hover
-     — cursor:help hints that the value is inspectable. */
+/* Header row lays out title + info glyph inline; align items centered so
+   the small `?` sits beside the eyebrow text at the same visual baseline. */
+.blending-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.25rem;
+}
+
+/* `?` info glyph — hover surfaces the formula popup below the header.
+   Small circular affordance so it doesn't compete with the eyebrow. */
+.blending-card__info {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 0.62rem;
+  font-weight: 600;
+  line-height: 1;
   cursor: help;
+  user-select: none;
+}
+
+.blending-card__info:hover,
+.blending-card__info:focus {
+  color: var(--accent);
+  border-color: var(--accent);
+  outline: none;
+}
+
+.blending-card__info-popup {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 6;
+  min-width: 300px;
+  max-width: 380px;
+  padding: 0.6rem 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  white-space: normal;
+  cursor: default;
+}
+
+.blending-card__info:hover .blending-card__info-popup,
+.blending-card__info:focus .blending-card__info-popup,
+.blending-card__info:focus-within .blending-card__info-popup {
+  display: block;
+}
+
+.blending-card__value-popup-formula {
+  display: block;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+}
+
+.blending-card__value-popup-numbers {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.blending-card__value-popup-note {
+  display: block;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-tertiary);
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
+.blending-card__value {
   margin: 0;
   font-size: 1.55rem;
   font-weight: 600;

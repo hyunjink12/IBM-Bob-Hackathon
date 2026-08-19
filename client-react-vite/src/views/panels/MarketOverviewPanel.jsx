@@ -312,22 +312,34 @@ function BlendingEconomicsCard({ blending }) {
     <article className="blending-card">
       <div className="blending-card__header">
         <h3>Blending Economics</h3>
+        {/* Small `?` glyph next to the header — hovering surfaces the formula,
+            live inputs, and the refiner-POV note without hiding the affordance
+            behind the big value the way an inline value-hover would. */}
+        <span className="blending-card__info" tabIndex={0} aria-label="How this is calculated">
+          ?
+          <span className="blending-card__info-popup" role="tooltip">
+            <span className="blending-card__value-popup-formula">
+              blender_advantage = RBOB − (ethanol − D6 RIN)
+            </span>
+            <span className="blending-card__value-popup-numbers">
+              {blending.rbob_usd_per_gallon.toFixed(2)} − (
+              {blending.ethanol_usd_per_gallon.toFixed(2)} −{' '}
+              {blending.rin_included
+                ? blending.d6_rin_usd_per_gallon.toFixed(2)
+                : '0.00'}
+              ) = {sign}${magnitude}/gal
+            </span>
+            <span className="blending-card__value-popup-note">
+              Refiner POV — the RIN credit is captured by the blender at
+              the point of blending, so it offsets the wholesale ethanol
+              cost when comparing ethanol vs RBOB as a blendstock.
+            </span>
+          </span>
+        </span>
       </div>
       <div className="blending-card__body">
         <div className="blending-card__value-block">
-          <p
-            className="blending-card__value"
-            title={
-              `blender_advantage = RBOB − (ethanol − D6 RIN)\n` +
-              `${blending.rbob_usd_per_gallon.toFixed(2)} − ` +
-              `(${blending.ethanol_usd_per_gallon.toFixed(2)} − ` +
-              `${blending.rin_included ? blending.d6_rin_usd_per_gallon.toFixed(2) : '0.00'}) ` +
-              `= ${sign}$${magnitude}/gal\n\n` +
-              `Refiner POV: the RIN credit is captured by the blender at the ` +
-              `point of blending, so it offsets the wholesale ethanol cost when ` +
-              `evaluating ethanol vs RBOB as a blendstock.`
-            }
-          >
+          <p className="blending-card__value">
             {sign}${magnitude}
             <span className="blending-card__unit">/gal</span>
           </p>
