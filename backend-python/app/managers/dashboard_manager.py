@@ -499,6 +499,17 @@ class DashboardManager:
         production_rows = _dedupe_weekly(production_rows)
         production_by_date = {r.obs_date: r.value for r in production_rows}
 
+        def _release_date(row):
+            # EIA's API returns the period-ending date (Friday) for weekly
+            # WPSR data. The ACTUAL release day is the following Wednesday
+            # — that's when the market gets the print. Shift Friday-dated
+            # rows +5 days so chart dots land on the day traders reacted;
+            # seed rows are already Wednesday-dated (release day), leave
+            # them alone.
+            if row.obs_date.weekday() == 4:  # Friday
+                return row.obs_date + timedelta(days=5)
+            return row.obs_date
+
         releases: list[dict] = []
         prior_stocks: float | None = None
         prior_production: float | None = None
@@ -525,7 +536,7 @@ class DashboardManager:
             if start_date is None or row.obs_date >= start_date:
                 releases.append(
                     {
-                        "date": row.obs_date.isoformat(),
+                        "date": _release_date(row).isoformat(),
                         "stocks_mmbbl": round(stocks_mmbbl, 3),
                         "stocks_wow_pct": stocks_wow_pct,
                         "production_mbpd": production_mbpd,
