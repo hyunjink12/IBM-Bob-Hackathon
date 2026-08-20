@@ -156,7 +156,11 @@ class DashboardManager:
         metrics = []
         for key, series_id, field_name, unit, description, display_label in self.OVERVIEW_SERIES:
             value = getattr(latest, field_name, None) if latest else None
-            last_updated = self._repository.get_series_last_updated(series_id)
+            # Use the OBSERVATION date, not fetched_at. For weekly/monthly
+            # series (D6 RIN, EIA weekly) fetched_at reflects when the
+            # ingester last ran, which is misleading when the underlying
+            # data hasn't advanced. obs_date reflects the actual data recency.
+            latest_obs_date = self._repository.get_series_latest_obs_date(series_id)
             metrics.append(
                 {
                     "key": key,
@@ -164,7 +168,7 @@ class DashboardManager:
                     "value": value,
                     "unit": unit,
                     "description": description,
-                    "last_updated": last_updated.isoformat() if last_updated else None,
+                    "last_updated": latest_obs_date.isoformat() if latest_obs_date else None,
                 }
             )
 
@@ -230,9 +234,9 @@ class DashboardManager:
 
         # RBOB rides in the blending payload (it isn't a crush model input, so
         # it's not in OVERVIEW_SERIES) — but the frontend still renders a
-        # standard metric card for it. Expose the same last_updated timestamp
-        # the metric grid uses so the stale badge stays consistent.
-        rbob_last_updated = self._repository.get_series_last_updated(SERIES_RBOB)
+        # standard metric card for it. Use obs_date (not fetched_at) so the
+        # "as of" reflects data recency the same way every other metric card does.
+        rbob_last_updated = self._repository.get_series_latest_obs_date(SERIES_RBOB)
 
         return {
             "as_of": latest.obs_date.isoformat(),
@@ -777,10 +781,13 @@ class DashboardManager:
     def _build_stale_tape_items(self) -> list[dict]:
         stale: list[dict] = []
         for key, series_id, _, _, _, display_label in self.OVERVIEW_SERIES:
-            last_updated = self._repository.get_series_last_updated(series_id)
-            if last_updated is None:
+            # Stale = the underlying observation is old, not that we haven't
+            # re-fetched recently. Use obs_date to catch cases where the
+            # ingester keeps running but the data source has stopped updating.
+            latest_obs_date = self._repository.get_series_latest_obs_date(series_id)
+            if latest_obs_date is None:
                 continue
-            age_days = (date.today() - last_updated.date()).days
+            age_days = (date.today() - latest_obs_date).days
             if age_days >= 7:
                 stale.append(
                     {
@@ -839,7 +846,7 @@ class DashboardManager:
         if prior is not None:
             delta = latest.wasde_corn_for_ethanol_mbu - prior.wasde_corn_for_ethanol_mbu
 
-        last_updated = self._repository.get_series_last_updated(SERIES_WASDE_CORN_ETHANOL)
+        last_updated = self._repository.get_series_latest_obs_date(SERIES_WASDE_CORN_ETHANOL)
         return {
             "value_mbu": latest.wasde_corn_for_ethanol_mbu,
             "report_month": latest.obs_date.strftime("%Y-%m"),
