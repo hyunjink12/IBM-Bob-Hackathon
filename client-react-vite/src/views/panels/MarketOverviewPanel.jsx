@@ -6,10 +6,17 @@ import { useRef, useState } from 'react'
 
 const STALE_AFTER_DAYS = 7  // series with age_days >= this get a "stale" badge (matches backend tape)
 
-/** "2026-07-30" → "Jul 30, 2026" for the sparkline hover tooltip + axis labels. */
+/**
+ * "2026-07-30" → "Jul 30, 2026". Parses YYYY-MM-DD as LOCAL time (not UTC)
+ * so the label matches the calendar day the data covers — plain `new Date`
+ * treats bare ISO dates as UTC and displays them a day early in western TZs.
+ */
 function formatShortDate(iso) {
   if (!iso) return ''
-  const date = new Date(iso)
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso))
+  const date = dateOnly
+    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+    : new Date(iso)
   if (Number.isNaN(date.getTime())) return iso
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
@@ -38,7 +45,13 @@ function formatTimestamp(iso) {
  */
 function daysSince(iso) {
   if (!iso) return null
-  const then = new Date(iso)
+  // Parse YYYY-MM-DD as LOCAL to match the backend's obs_date semantics —
+  // plain `new Date` treats bare ISO dates as UTC and can misalign by one
+  // day in the viewer's timezone, producing off-by-one stale-badge counts.
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso))
+  const then = dateOnly
+    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+    : new Date(iso)
   if (Number.isNaN(then.getTime())) return null
   const thenDay = new Date(then.getFullYear(), then.getMonth(), then.getDate())
   const today = new Date()
@@ -241,7 +254,7 @@ export function MarketOverviewPanel({ overview }) {
               </p>
               <p className="metric-card__description">{metric.description}</p>
               <p className="metric-card__updated">
-                Updated {formatTimestamp(metric.last_updated) ?? 'unknown'}
+                As of {formatShortDate(metric.last_updated) || 'unknown'}
               </p>
             </article>
           )
@@ -275,7 +288,7 @@ function RbobCard({ blending }) {
       </p>
       <p className="metric-card__description">NYMEX RBOB futures — ethanol&rsquo;s blendstock competitor</p>
       <p className="metric-card__updated">
-        Updated {formatTimestamp(blending.rbob_last_updated) ?? 'unknown'}
+        As of {formatShortDate(blending.rbob_last_updated) || 'unknown'}
       </p>
     </article>
   )
