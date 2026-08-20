@@ -249,6 +249,27 @@ class DuckDbRepository:
             return None
         return result[0]
 
+    def get_series_latest_obs_date(self, series_id: str) -> date | None:
+        """
+        Return the latest OBSERVATION date for a logical series id.
+
+        Distinct from `get_series_last_updated` (which returns fetched_at).
+        For stale-prone series like the EPA D6 CSV — where every ingest
+        re-parses the same file until a fresh CSV is dropped — fetched_at
+        moves every minute but obs_date only advances when the underlying
+        data actually changes. The UI shows obs_date so mentors see the
+        recency of the DATA, not the recency of our fetcher.
+        """
+        result = self._fetchone(
+            """
+            SELECT MAX(obs_date) FROM raw_observations WHERE series_id = ?
+            """,
+            [series_id],
+        )
+        if result is None or result[0] is None:
+            return None
+        return result[0]
+
     def replace_merged_daily(self, rows: list[MergedDailyRow]) -> int:
         """Replace merged daily rows for the provided dates."""
         if not rows:
