@@ -1,5 +1,7 @@
 # IBM-Bob — Ethanol Crush Margin Dashboard
 
+**Live:** https://ibm-wildcard-submission-jul-2026.vercel.app/
+
 Decision-support dashboard for corn ethanol crush margins, z-scores, and warning signals.
 
 ## How IBM Bob was used
