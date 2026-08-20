@@ -41,6 +41,17 @@ export function MethodologyFooter() {
         mixed bases and seeded fallbacks may apply when a live feed is unavailable.
       </p>
       <p>
+        <strong>DDGS and corn oil</strong> trade in cash/OTC markets with no free
+        live feed (real prices are behind DTN / Barchart / USDA AMS
+        subscriptions). Rather than pay for a service on a portfolio project,
+        both coproducts are pinned to a static realistic level (DDGS
+        $165/short ton, corn oil $0.38/lb) so their contribution to the plant
+        margin stays honest — a fake daily random walk would falsely imply a
+        market signal that doesn&rsquo;t exist. Adjust the constants in{' '}
+        <code>seed_data_provider.py</code> when the underlying cash markets
+        drift materially, or wire in a real feed if you have one.
+      </p>
+      <p>
         Z-score bands: Rich &gt; +1.5, Elevated +1 to +1.5, Normal −1 to +1, Soft −1.5
         to −1, Weak &lt; −1.5. Negative margins are shown as-is. Warning rules use
         20th/80th percentile thresholds over a rolling 180-day window; each firing is
