@@ -52,10 +52,15 @@ class SeedDataProvider:
 
             corn += self._random.uniform(-0.04, 0.04) + 0.002 * noise
             ethanol += self._random.uniform(-0.02, 0.02) + 0.001 * noise
-            ddgs += self._random.uniform(-1.0, 1.0)
+            # DDGS + corn oil are cash/OTC markets with no free live feed —
+            # we're not paying for DTN/Barchart, so we pin them to a static
+            # realistic level instead of random-walking. Fake daily variation
+            # would falsely imply signal and pollute the plant margin series.
+            # Static values are disclosed in the MethodologyFooter.
+            ddgs = 165.0
+            corn_oil = 0.38
             rbob += self._random.uniform(-0.03, 0.03)
             nat_gas += self._random.uniform(-0.05, 0.05)
-            corn_oil += self._random.uniform(-0.01, 0.01)
 
             observations.extend(
                 self._daily_observations(
