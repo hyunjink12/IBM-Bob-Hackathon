@@ -98,7 +98,7 @@ def build_ingestion_manager() -> MarketDataIngestionManager:
     epa_csv_path.parent.mkdir(parents=True, exist_ok=True)
     # First-boot seed: if the volume's EPA CSV is missing, copy the snapshot
     # baked into the image at build time. Lets a fresh Railway deploy come up
-    # with real RIN prices before the user runs their first weekly CSV update.
+    # with real RIN prices before the user runs their first monthly CSV update.
     if not epa_csv_path.exists() and _EPA_SEED_DIR.exists():
         import shutil
         for seed_file in _EPA_SEED_DIR.iterdir():

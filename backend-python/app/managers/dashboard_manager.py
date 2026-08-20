@@ -123,7 +123,7 @@ class DashboardManager:
             # no-op, but the unit label must name the traded instrument. The
             # regulatory-value $/bu conversion lives in the composition panel.
             "$/RIN",
-            "EPA D6 corn ethanol RIN (weekly)",
+            "EPA D6 corn ethanol RIN (weekly rows, refreshed monthly)",
             "D6 RIN Price",
         ),
     )

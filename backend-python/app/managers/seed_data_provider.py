@@ -87,7 +87,7 @@ class SeedDataProvider:
                     )
                 )
 
-            # D6 RIN prices intentionally NOT seeded here. Real EPA weekly data
+            # D6 RIN prices intentionally NOT seeded here. Real EPA data
             # lands via EpaRinFileClient; when the CSV is absent, RIN simply
             # stays None on merged_daily rather than showing fabricated values.
             # The margin calculator handles missing RIN gracefully (rin_included

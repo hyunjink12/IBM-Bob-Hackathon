@@ -98,13 +98,13 @@ curl -X POST http://localhost:8000/api/admin/ingest \
   -H "Authorization: Bearer $APP_ADMIN_TOKEN"
 ```
 
-## Refreshing D6 RIN prices  - MANUAL WEEKLY STEP
+## Refreshing D6 RIN prices — manual monthly step
 
 **This is the only recurring manual step in the whole pipeline.** Everything else — Yahoo futures, EIA weekly, CFTC COT — refreshes automatically on ingest. D6 RIN prices come from a JavaScript-rendered EPA dashboard that has no clean API, so the workflow is: download CSV → overwrite the same file path → trigger ingest.
 
 The **D6 RIN value** is displayed as a regulatory-value equivalent alongside the plant operating margin — at current prices it's currently larger than the simple ethanol/corn commodity spread. Skipping this refresh means the app forward-fills a stale RIN price and the regulatory-value layer drifts from reality. The dashboard does not assume producers capture the full RIN value dollar-for-dollar as revenue (pass-through to obligated parties is out of scope).
 
-**Weekly workflow:**
+**Monthly workflow:**
 
 1. Open [EPA's RIN Trades and Price Information dashboard](https://www.epa.gov/fuels-registration-reporting-and-compliance-help/rin-trades-and-price-information).
 2. Select the **RIN Price Data** view from the dropdown.
@@ -193,7 +193,7 @@ cd backend-python
 | `config/wasde_schedule.json` | USDA-published WASDE release dates (see caveat below) |
 | `client-react-vite/src/config/dashboard_config.js` | Z-score window, chart range, tooltips |
 | `backend-python/.env` | Secrets only (EIA key, admin token, watsonx credentials) |
-| `backend-python/data/epa/rin_prices_2026.csv` | EPA D6 RIN weekly prices, **vintage-tagged so anyone can see this is a snapshot, not live** — overwrite weekly (see "Refreshing D6 RIN prices" above). In prod, lives at `$APP_DATA_DIR/epa/rin_prices_2026.csv` on the mounted volume; rename to `_2027.csv` when the year rolls over. |
+| `backend-python/data/epa/rin_prices_2026.csv` | EPA D6 RIN transaction prices, weekly-resolution rows. Vintage-tagged so anyone can see this is a snapshot, not live — **overwrite monthly** when EPA publishes fresh data (see "Refreshing D6 RIN prices" above). In prod, lives at `$APP_DATA_DIR/epa/rin_prices_2026.csv` on the mounted volume; rename to `_2027.csv` when the year rolls over. |
 
 ## Data caveats
 

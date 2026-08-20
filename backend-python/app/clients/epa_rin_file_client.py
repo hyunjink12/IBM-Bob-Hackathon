@@ -1,4 +1,10 @@
-"""EPA D6 RIN weekly price ingestion from a locally-dropped CSV export."""
+"""EPA D6 RIN price ingestion from a locally-dropped CSV export.
+
+Each row in the CSV is a WEEKLY transaction-price print, but the EPA EMTS
+dashboard where the CSV is exported from only refreshes ROUGHLY MONTHLY.
+The manual refresh cadence is therefore monthly, not weekly — see the
+README's "Refreshing D6 RIN prices" section.
+"""
 
 from __future__ import annotations
 
@@ -14,7 +20,8 @@ _logger = logging.getLogger(__name__)
 
 class EpaRinFileClient:
     """
-    Reads D6 RIN weekly prices from an EPA EMTS 'Export Table' CSV on disk.
+    Reads D6 RIN weekly-resolution price rows from an EPA EMTS 'Export Table'
+    CSV on disk (the EMTS dashboard publishes new rows roughly monthly).
 
     Casual: turns EPA's downloaded CSV into raw observations the app can ingest.
 

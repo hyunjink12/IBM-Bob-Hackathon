@@ -35,7 +35,9 @@ export function MethodologyFooter() {
         Prices: <strong>ethanol/corn/RBOB/nat gas</strong> from CBOT + NYMEX front-month
         futures (Yahoo Finance).{' '}
         <strong>Ethanol production and stocks</strong> from EIA weekly.{' '}
-        <strong>D6 RIN prices</strong> from EPA EMTS via weekly CSV file-drop.{' '}
+        <strong>D6 RIN prices</strong> from EPA EMTS via monthly CSV file-drop
+        (each row is a weekly transaction-price print; the EPA dashboard itself
+        only publishes new rows roughly once a month).{' '}
         <strong>CFTC COT</strong> for managed-money positioning from CFTC Socrata,
         weekly. This is a decision-support tool, not an institutional margin model —
         mixed bases and seeded fallbacks may apply when a live feed is unavailable.
